@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seren's Journey • Coffee Talk Lo-Fi Demo</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=Cinzel:wght@600&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0d0811;
+            color: #fce7f3;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        /* Subtle tape-grain and warm ambient lighting */
+        .lofi-glow {
+            box-shadow: 0 0 50px -10px rgba(245, 158, 11, 0.18), inset 0 0 40px rgba(180, 83, 9, 0.12);
+        }
+
+        .cozy-glass {
+            background: rgba(23, 14, 28, 0.85);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(245, 158, 11, 0.22);
+        }
+
+        .cozy-glass-subtle {
+            background: rgba(30, 19, 36, 0.65);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Custom scrollbar for dialogue logs and notes */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #170e1c;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #b45309;
+            border-radius: 9999px;
+        }
+
+        /* Pulse glow for notifications */
+        @keyframes phoneVibe {
+            0%, 100% { transform: rotate(0deg); }
+            20% { transform: rotate(-4deg) scale(1.02); }
+            40% { transform: rotate(4deg) scale(1.02); }
+            60% { transform: rotate(-2deg); }
+            80% { transform: rotate(2deg); }
+        }
+
+        .phone-ringing {
+            animation: phoneVibe 0.5s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-amber-600 selection:text-white">
+
+    <header class="w-full bg-[#130b18]/95 border-b border-amber-900/30 px-4 sm:px-6 py-3 sticky top-0 z-40 flex items-center justify-between shadow-xl">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-rose-900/30 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                <i class="fa-solid fa-mug-hot text-base"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-sm sm:text-base font-bold text-amber-100 tracking-wide">Seren's Journey</h1>
+                    <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                        Coffee Talk Lo-Fi Demo
+                    </span>
+                </div>
+                <p class="text-[11px] text-amber-300/60 hidden sm:block">Level 1: 8:15 PM • Homework, Hot Tea & Phone Notifications</p>
+            </div>
+        </div>
+
+        <!-- Lo-Fi Synth Audio Controls -->
+        <div class="flex items-center gap-3">
+            <div id="lofiTrackWidget" class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-950/40 border border-amber-800/40 text-xs text-amber-200/80">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span id="trackLabel" class="font-mono text-[11px]">♪ Rhondda Rain (Lo-Fi 68 BPM)</span>
+            </div>
+            <button id="toggleAudioBtn" class="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold flex items-center gap-2 transition-all">
+                <i id="audioIcon" class="fa-solid fa-volume-high"></i>
+                <span id="audioBtnText">Mute Audio</span>
+            </button>
+            <button id="resetLevelBtn" class="p-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-amber-200 border border-slate-800 text-xs transition-all" title="Restart Demo">
+                <i class="fa-solid fa-arrow-rotate-left"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        
+        <!-- Left Column: Procedural Visualizer Canvas & Stat Tracker (7 cols) -->
+        <div class="lg:col-span-7 flex flex-col gap-3">
+            
+            <!-- Canvas Viewport Frame -->
+            <div class="relative w-full aspect-[16/10] bg-[#140b17] rounded-3xl overflow-hidden border border-amber-800/40 lofi-glow flex flex-col shadow-2xl">
+                <!-- 2D Procedural Lo-Fi Canvas -->
+                <canvas id="lofiCanvas" class="w-full h-full block absolute inset-0 z-0"></canvas>
+
+                <!-- Weather & Location Watermark Overlay -->
+                <div class="absolute top-4 left-4 z-10 flex flex-col gap-1 pointer-events-none">
+                    <div class="flex items-center gap-2 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs text-amber-200 font-medium">
+                        <i class="fa-solid fa-cloud-rain text-sky-400"></i>
+                        <span>Cwm Rhondda • 11°C Steady Drizzle</span>
+                    </div>
+                </div>
+
+                <!-- Emotional / Posture Badge -->
+                <div class="absolute top-4 right-4 z-10 pointer-events-none">
+                    <div id="serenMoodPill" class="flex items-center gap-2 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-amber-500/30 text-xs text-amber-300 font-semibold shadow-md">
+                        <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                        <span id="serenMoodText">Focused & Caring</span>
+                    </div>
+                </div>
+
+                <!-- Interactive Mug Click Prompt -->
+                <div id="mugInteractionPrompt" class="absolute bottom-16 left-8 z-10 hidden cursor-pointer group" onclick="openBrewingStation()">
+                    <div class="bg-amber-950/80 backdrop-blur-md border border-amber-500/50 text-amber-200 text-xs px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-2 group-hover:bg-amber-900 transition-all animate-bounce">
+                        <i class="fa-solid fa-hand-pointer text-amber-400"></i>
+                        <span>Brew Dad's Tea (Click mug)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vitals & Resource Tracker Bar -->
+            <div class="grid grid-cols-3 gap-2.5 sm:gap-4 cozy-glass rounded-2xl p-3.5 border border-amber-900/30">
+                <!-- Stat 1: Study Progress -->
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-300 flex items-center gap-1.5 font-medium">
+                            <i class="fa-solid fa-book-open text-sky-400"></i> Biology Mock
+                        </span>
+                        <span id="studyPctText" class="font-mono text-amber-300 font-bold">25%</span>
+                    </div>
+                    <div class="w-full bg-slate-950/70 h-2 rounded-full overflow-hidden border border-slate-800">
+                        <div id="studyProgressBar" class="bg-gradient-to-r from-sky-500 to-indigo-500 h-full w-[25%] transition-all duration-500 rounded-full"></div>
+                    </div>
+                </div>
+
+                <!-- Stat 2: Dad's Comfort -->
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-300 flex items-center gap-1.5 font-medium">
+                            <i class="fa-solid fa-heart-pulse text-rose-400"></i> Dad's Comfort
+                        </span>
+                        <span id="dadComfortText" class="font-mono text-rose-300 font-bold">60%</span>
+                    </div>
+                    <div class="w-full bg-slate-950/70 h-2 rounded-full overflow-hidden border border-slate-800">
+                        <div id="dadComfortBar" class="bg-gradient-to-r from-rose-600 to-amber-500 h-full w-[60%] transition-all duration-500 rounded-full"></div>
+                    </div>
+                </div>
+
+                <!-- Stat 3: Seren's Energy / Peace -->
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-300 flex items-center gap-1.5 font-medium">
+                            <i class="fa-solid fa-battery-half text-emerald-400"></i> Seren's Peace
+                        </span>
+                        <span id="serenEnergyText" class="font-mono text-emerald-300 font-bold">75%</span>
+                    </div>
+                    <div class="w-full bg-slate-950/70 h-2 rounded-full overflow-hidden border border-slate-800">
+                        <div id="serenEnergyBar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full w-[75%] transition-all duration-500 rounded-full"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contextual Task Bar -->
+            <div class="cozy-glass-subtle rounded-2xl p-3 flex items-center justify-between text-xs text-amber-200/90 border border-amber-900/30">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-clipboard-check text-amber-400 text-sm"></i>
+                    <span id="currentObjectiveText">Current Objective: Read Dad's note & prepare his evening herbal infusion.</span>
+                </div>
+                <span class="text-[10px] font-mono uppercase bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">Phase 1</span>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Coffee Talk Dialogue Console & Interactive Challenge Tabs (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-3 min-h-[460px]">
+
+            <!-- Tabbed Interaction Modes: [Dialogue Story] vs [Dad's Tea Station] vs [Phone & Notifications] -->
+            <div class="flex items-center gap-2 p-1.5 bg-[#170e1c] rounded-2xl border border-amber-900/40">
+                <button id="tabStoryBtn" onclick="switchRightTab('story')" class="flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-amber-500/20 text-amber-200 border border-amber-500/30 shadow-md">
+                    <i class="fa-solid fa-comment-dots text-amber-400"></i> Story & Chat
+                </button>
+                <button id="tabBrewBtn" onclick="switchRightTab('brew')" class="flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent">
+                    <i class="fa-solid fa-kitchen-set text-amber-400"></i> Brew Infusion
+                </button>
+                <button id="tabPhoneBtn" onclick="switchRightTab('phone')" class="relative flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent">
+                    <i id="phoneTabIcon" class="fa-solid fa-mobile-screen text-amber-400"></i> Phone
+                    <span id="phoneAlertBadge" class="hidden absolute top-1 right-2 w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                </button>
+            </div>
+
+            <!-- PANEL 1: Dialogue & Narrative Engine -->
+            <div id="panelStory" class="cozy-glass rounded-3xl p-5 border border-amber-900/40 shadow-xl flex-1 flex flex-col justify-between">
+                
+                <!-- Dialogue History / Node View -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-amber-900/30">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                            <span id="speakerName" class="text-sm font-extrabold text-amber-300 tracking-wider">SEREN</span>
+                        </div>
+                        <span id="dialogueTimestamp" class="text-[11px] font-mono text-amber-400/60">20:15</span>
+                    </div>
+
+                    <!-- Typewritten Dialogue Content -->
+                    <div class="min-h-[95px] flex items-start">
+                        <p id="dialogueSpeech" class="text-sm sm:text-base text-amber-50 leading-relaxed font-normal">
+                            <!-- Injected dynamically -->
+                        </p>
+                    </div>
+
+                    <!-- Internal Thought / Context Hint -->
+                    <div id="internalThoughtBox" class="p-3 rounded-xl bg-black/40 border border-amber-500/20 text-xs text-amber-300/80 italic flex items-start gap-2">
+                        <i class="fa-solid fa-brain mt-0.5 text-amber-400 shrink-0"></i>
+                        <span id="thoughtText">The Biology mock exam is first thing tomorrow. But Dad's cough sounded rough when he went upstairs...</span>
+                    </div>
+                </div>
+
+                <!-- Choice Select Buttons -->
+                <div class="mt-4 pt-4 border-t border-amber-900/30 flex flex-col gap-2" id="choiceContainer">
+                    <!-- Choices injected dynamically -->
+                </div>
+
+            </div>
+
+            <!-- PANEL 2: Interactive Tea & Prescription Remedy Mini-Game -->
+            <div id="panelBrew" class="hidden cozy-glass rounded-3xl p-5 border border-amber-900/40 shadow-xl flex-1 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between pb-3 border-b border-amber-900/30">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-mug-saucer text-amber-400 text-lg"></i>
+                            <span class="text-sm font-extrabold text-amber-300 tracking-wide">DAD'S SOOTHING INFUSION</span>
+                        </div>
+                        <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Recipe Triage</span>
+                    </div>
+
+                    <p class="text-xs text-slate-300 mt-3 leading-relaxed">
+                        Dad left a scribble on the memo board: <br>
+                        <span class="text-amber-200 italic font-medium">"Seren bach, chest is tight tonight. Nothing with caffeine, just that warm herbal blend we got from the apothecary in Pontypridd."</span>
+                    </p>
+
+                    <!-- Tea Recipe Selector -->
+                    <div class="mt-4 space-y-3">
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-amber-400/80">Step 1: Choose Base Herbal Leaf</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1.5" id="teaBaseGrid">
+                                <button onclick="selectTeaBase('chamomile')" id="base-chamomile" class="p-2 rounded-xl border border-amber-500/40 bg-amber-500/20 text-amber-200 text-xs font-semibold text-center hover:bg-amber-500/30">
+                                    Chamomile <span class="block text-[9px] text-amber-300 font-normal">Calming & Decaf</span>
+                                </button>
+                                <button onclick="selectTeaBase('welsh_gold')" id="base-welsh_gold" class="p-2 rounded-xl border border-white/10 bg-black/40 text-slate-300 text-xs font-semibold text-center hover:bg-white/10">
+                                    Welsh Gold <span class="block text-[9px] text-slate-400 font-normal">Strong Black (Caffeine)</span>
+                                </button>
+                                <button onclick="selectTeaBase('peppermint')" id="base-peppermint" class="p-2 rounded-xl border border-white/10 bg-black/40 text-slate-300 text-xs font-semibold text-center hover:bg-white/10">
+                                    Peppermint <span class="block text-[9px] text-slate-400 font-normal">Crisp & Clearing</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-amber-400/80">Step 2: Add Soothing Ingredient</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1.5" id="teaAddGrid">
+                                <button onclick="selectTeaAdd('welsh_honey')" id="add-welsh_honey" class="p-2 rounded-xl border border-amber-500/40 bg-amber-500/20 text-amber-200 text-xs font-semibold text-center hover:bg-amber-500/30">
+                                    Heather Honey <span class="block text-[9px] text-amber-300 font-normal">Coats throat</span>
+                                </button>
+                                <button onclick="selectTeaAdd('lemon_slice')" id="add-lemon_slice" class="p-2 rounded-xl border border-white/10 bg-black/40 text-slate-300 text-xs font-semibold text-center hover:bg-white/10">
+                                    Fresh Lemon <span class="block text-[9px] text-slate-400 font-normal">High Vitamin C</span>
+                                </button>
+                                <button onclick="selectTeaAdd('spicy_ginger')" id="add-spicy_ginger" class="p-2 rounded-xl border border-white/10 bg-black/40 text-slate-300 text-xs font-semibold text-center hover:bg-white/10">
+                                    Raw Ginger <span class="block text-[9px] text-slate-400 font-normal">Spicy & Hot</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-amber-400/80">Step 3: Evening Water Temp</label>
+                            <div class="flex gap-2 mt-1.5">
+                                <button onclick="selectWaterTemp('perfect')" id="temp-perfect" class="flex-1 py-1.5 rounded-xl border border-amber-500/40 bg-amber-500/20 text-amber-200 text-xs font-medium">
+                                    Warm & Steeping (85°C)
+                                </button>
+                                <button onclick="selectWaterTemp('boiling')" id="temp-boiling" class="flex-1 py-1.5 rounded-xl border border-white/10 bg-black/40 text-slate-300 text-xs font-medium">
+                                    Scalding Rolling Boil (100°C)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Brew Submission Button -->
+                <div class="pt-4 mt-3 border-t border-amber-900/30">
+                    <button id="brewTeaSubmitBtn" onclick="submitBrewedDrink()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-lg transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-mug-hot"></i> Steep and Take Cup Upstairs to Dad
+                    </button>
+                </div>
+            </div>
+
+            <!-- PANEL 3: Phone & Distraction Triage Station -->
+            <div id="panelPhone" class="hidden cozy-glass rounded-3xl p-5 border border-amber-900/40 shadow-xl flex-1 flex flex-col justify-between">
+                <div>
+                    <!-- Phone Header -->
+                    <div class="flex items-center justify-between pb-3 border-b border-amber-900/30">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-mobile-screen-button text-amber-400 text-lg"></i>
+                            <span class="text-sm font-extrabold text-amber-300 tracking-wide">SEREN'S SMARTPHONE</span>
+                        </div>
+                        <span class="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
+                            <i class="fa-solid fa-wifi text-[9px]"></i> 82% 4G
+                        </span>
+                    </div>
+
+                    <p class="text-xs text-slate-300 mt-2">
+                        Young carers must triage dozens of messages each evening between schoolmates, revision groups, family, and support services.
+                    </p>
+
+                    <!-- Feed of pending incoming notifications -->
+                    <div class="mt-3 space-y-2.5 max-h-56 overflow-y-auto pr-1" id="notificationsFeed">
+                        <!-- Notifications injected via JS -->
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-amber-900/30 text-[11px] text-amber-300/70 flex items-center justify-between">
+                    <span>Active distractions filter: <strong class="text-amber-200">Study Mode</strong></span>
+                    <button onclick="clearSpamNotifications()" class="text-amber-400 hover:underline">Dismiss Non-Urgent</button>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <div id="modalOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="max-w-md w-full cozy-glass border border-amber-500/50 rounded-3xl p-6 shadow-2xl flex flex-col gap-4 text-center animate-fade-in">
+            <div id="modalIconWrap" class="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 mx-auto flex items-center justify-center text-amber-400 text-2xl">
+                <i id="modalIcon" class="fa-solid fa-mug-hot"></i>
+            </div>
+            <h3 id="modalTitle" class="text-xl font-bold text-amber-100">Infusion Delivered</h3>
+            <p id="modalBody" class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                Dad gently sipped the warm chamomile and honey tea. His breathing eased and he told Seren to go focus on her revision.
+            </p>
+            <button onclick="closeModal()" class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-all">
+                Continue Evening
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /* 
+           SEREN'S JOURNEY: COFFEE TALK LO-FI ENGINE
+           Data-Driven Script and State Architecture for ProMo Cymru Co-Design
+        */
+
+        const gameState = {
+            studyProgress: 25,
+            dadComfort: 60,
+            serenEnergy: 75,
+            currentNode: 'start',
+            activeTab: 'story',
+            isAudioMuted: false,
+            brewedDrink: {
+                base: 'chamomile',
+                addition: 'welsh_honey',
+                temp: 'perfect'
+            },
+            unhandledNotifications: [
+                {
+                    id: 'notif_1',
+                    sender: 'Mali (School Friend)',
+                    app: 'WhatsApp',
+                    time: '20:12',
+                    badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+                    icon: 'fa-brands fa-whatsapp text-emerald-400',
+                    preview: 'Did Mr Evans say question 4 was on photosynthesis or cell division?? panicking!!',
+                    actionType: 'homework',
+                    pointsStudy: +15,
+                    pointsEnergy: -5
+                },
+                {
+                    id: 'notif_2',
+                    sender: 'Valleys Pharmacy',
+                    app: 'SMS Alert',
+                    time: '20:04',
+                    badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+                    icon: 'fa-solid fa-prescription-bottle-medical text-sky-400',
+                    preview: 'Reminder: Inhaler repeat prescription is ready for collection at Treorchy branch.',
+                    actionType: 'care',
+                    pointsDad: +15,
+                    pointsEnergy: +5
+                },
+                {
+                    id: 'notif_3',
+                    sender: 'TikTok / Group Reel',
+                    app: 'Social',
+                    time: '19:55',
+                    badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                    icon: 'fa-brands fa-tiktok text-purple-400',
+                    preview: 'Rhys shared a video: "When the school bus leaves 1 minute early in the rain..."',
+                    actionType: 'distraction',
+                    pointsStudy: -5,
+                    pointsEnergy: +10
+                }
+            ],
+            dialogueLog: []
+        };
+
+        const STORY_NODES = {
+            start: {
+                speaker: "SEREN",
+                timestamp: "20:15",
+                mood: "Pensive",
+                speech: "The kitchen table is covered in Biology notes, highlighters, and Dad's prescription slips. The rain on the window pane has that rhythm... like a ticking clock.",
+                thought: "Tomorrow is the GCSE Biology mock test. But Dad had a coughing fit 10 minutes ago, and his kettle is still cold.",
+                choices: [
+                    {
+                        text: "Brew Dad's herbal tea first before opening the textbooks.",
+                        nextNode: "decision_tea_first",
+                        effect: () => {
+                            switchRightTab('brew');
+                            updateObjective("Prepare Dad's evening herbal infusion at the counter.");
+                        }
+                    },
+                    {
+                        text: "Power through 2 pages of revision first to make sure I don't fail.",
+                        nextNode: "decision_study_first",
+                        effect: () => {
+                            modifyStats(+15, -10, -5);
+                            playSound('paper');
+                        }
+                    },
+                    {
+                        text: "Check my vibrating phone—maybe Mali knows what questions are on the mock.",
+                        nextNode: "decision_phone_first",
+                        effect: () => {
+                            switchRightTab('phone');
+                            updateObjective("Check messages and triage urgent school/care alerts.");
+                            playSound('buzz');
+                        }
+                    }
+                ]
+            },
+            decision_study_first: {
+                speaker: "SEREN",
+                timestamp: "20:22",
+                mood: "Stressed",
+                speech: "I try to memorize the diagram of heart chambers, but every floorboard creak upstairs pulls my attention away. Did he take his 8 PM pills?",
+                thought: "It's so hard to read when your ears are strained waiting to hear if someone needs help.",
+                choices: [
+                    {
+                        text: "Put the books down and brew his herbal infusion now.",
+                        nextNode: "decision_tea_first",
+                        effect: () => switchRightTab('brew')
+                    },
+                    {
+                        text: "Text Mali for quick reassurance and check the care alarm app.",
+                        nextNode: "decision_phone_first",
+                        effect: () => switchRightTab('phone')
+                    }
+                ]
+            },
+            decision_phone_first: {
+                speaker: "SEREN",
+                timestamp: "20:17",
+                mood: "Divided Attention",
+                speech: "My screen lights up with 14 notifications. A TikTok meme from Rhys, a worried revision text from Mali, and a text from the pharmacy about Dad's prescription repeat.",
+                thought: "My classmates only have to worry about the exam. I have to make sure our fridge has fresh milk and Dad's meds are collected by 5 PM.",
+                choices: [
+                    {
+                        text: "Tap the Pharmacy SMS to save the collection code for tomorrow.",
+                        nextNode: "handled_pharmacy",
+                        effect: () => {
+                            modifyStats(0, +10, +5);
+                            removeNotification('notif_2');
+                        }
+                    },
+                    {
+                        text: "Reply to Mali with the Biology notes so she stops panicking.",
+                        nextNode: "handled_mali",
+                        effect: () => {
+                            modifyStats(+10, 0, -5);
+                            removeNotification('notif_1');
+                        }
+                    }
+                ]
+            },
+            decision_tea_first: {
+                speaker: "SEREN",
+                timestamp: "20:18",
+                mood: "Caring",
+                speech: "I warm the stoneware mug with hot tap water first, just the way Gran taught me. 'Never pour boiling water into a chilled mug, Seren bach.' Now... which herbs did Dad need?",
+                thought: "Dad's chest is tight, so no caffeine. He needs chamomile with real Welsh heather honey.",
+                choices: [
+                    {
+                        text: "Head to the tea cupboard to choose ingredients.",
+                        nextNode: "awaiting_brew",
+                        effect: () => switchRightTab('brew')
+                    }
+                ]
+            },
+            awaiting_brew: {
+                speaker: "SEREN",
+                timestamp: "20:20",
+                mood: "Focused",
+                speech: "The steam rises off the counter, smelling faintly of dried flowers and rain. If I get this recipe right, he'll sleep through the night without coughing.",
+                thought: "Select the blend on the right panel and click steep.",
+                choices: [
+                    {
+                        text: "Review Dad's recipe note again.",
+                        nextNode: "awaiting_brew",
+                        effect: () => {
+                            showModal(
+                                "fa-solid fa-note-sticky",
+                                "Dad's Handwritten Note",
+                                "'Seren bach, chest is tight tonight. Nothing with caffeine, just that warm herbal blend we got from the apothecary in Pontypridd with a spoonful of heather honey.'"
+                            );
+                        }
+                    }
+                ]
+            },
+            handled_pharmacy: {
+                speaker: "SEREN",
+                timestamp: "20:25",
+                mood: "Organized",
+                speech: "Logged the pharmacy barcode into my school satchel. Now I know I can pick it up on my walk back from school tomorrow afternoon before the bus leaves.",
+                thought: "One less worry buzzing in the back of my mind. That gives me room to breathe.",
+                choices: [
+                    {
+                        text: "Now steep Dad's chamomile drink.",
+                        nextNode: "decision_tea_first",
+                        effect: () => switchRightTab('brew')
+                    },
+                    {
+                        text: "Do 15 minutes of flashcards while the kettle boils.",
+                        nextNode: "finish_study_block",
+                        effect: () => modifyStats(+20, 0, -5)
+                    }
+                ]
+            },
+            handled_mali: {
+                speaker: "SEREN",
+                timestamp: "20:26",
+                mood: "Connected",
+                speech: "Sent Mali a voice note explaining the difference between pulmonary and systemic circulation. Hearing her sigh with relief made me feel grounded.",
+                thought: "Teaching a friend is actually the best way to revise. Two birds with one stone.",
+                choices: [
+                    {
+                        text: "Take Dad his hot tea before it gets cold.",
+                        nextNode: "decision_tea_first",
+                        effect: () => switchRightTab('brew')
+                    }
+                ]
+            },
+            tea_delivered_success: {
+                speaker: "SEREN",
+                timestamp: "20:34",
+                mood: "Relieved & Warm",
+                speech: "Dad smiled when I brought the steaming mug upstairs. 'Diolch yn fawr, Seren bach. The honey is lovely. Now turn off that phone and get a solid grade tomorrow.'",
+                thought: "His breathing is quiet now. The room is peaceful. I can actually sit down and read my notes with a calm heart.",
+                choices: [
+                    {
+                        text: "Complete final Biology flashcard set with full peace of mind.",
+                        nextNode: "victory_balanced_evening",
+                        effect: () => modifyStats(+35, +15, +15)
+                    }
+                ]
+            },
+            tea_delivered_imperfect: {
+                speaker: "SEREN",
+                timestamp: "20:34",
+                mood: "Apologetic",
+                speech: "Dad took a sip, but winced a bit. 'Oof, that's got black tea caffeine in it, bach—might keep me tossing and turning tonight. But thank you for trying.'",
+                thought: "I was rushing because of the exam stress and grabbed the wrong tin. I need to slow down and pay closer attention.",
+                choices: [
+                    {
+                        text: "Apologize, bring him a glass of water, and return to books.",
+                        nextNode: "victory_balanced_evening",
+                        effect: () => modifyStats(+20, -10, -5)
+                    }
+                ]
+            },
+            finish_study_block: {
+                speaker: "SEREN",
+                timestamp: "20:42",
+                mood: "Accomplished",
+                speech: "I went through the cell biology diagrams twice. It actually stayed in my head this time without sliding out.",
+                thought: "When home is calm, school work stops feeling like an impossible mountain.",
+                choices: [
+                    {
+                        text: "Check in on Dad one last time before bed.",
+                        nextNode: "victory_balanced_evening",
+                        effect: () => modifyStats(+10, +10, +5)
+                    }
+                ]
+            },
+            victory_balanced_evening: {
+                speaker: "SEREN",
+                timestamp: "21:00",
+                mood: "Content & Ready",
+                speech: "The kitchen is quiet. The rain has softened to a whisper against the glass. The books are packed into my satchel, Dad is resting easily, and I managed to keep all the plates spinning tonight.",
+                thought: "Being a young carer doesn't mean giving up on school—it means mastering a balance that most people our age can't even imagine.",
+                choices: [
+                    {
+                        text: "Replay Demo / Explore Different Choices",
+                        nextNode: "start",
+                        effect: () => resetGameState()
+                    }
+                ]
+            }
+        };
+
+        let audioCtx = null;
+        let rainNode = null;
+        let isAudioPlaying = false;
+        let lofiChordInterval = null;
+
+        function initAudio() {
+            if (audioCtx) return;
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                startProceduralRain();
+                startLoFiChords();
+                isAudioPlaying = true;
+            } catch (e) {
+                console.warn("Web Audio not allowed without user interaction", e);
+            }
+        }
+
+        // Procedural Welsh Valley Rain Noise Generator
+        function startProceduralRain() {
+            if (!audioCtx) return;
+            const bufferSize = audioCtx.sampleRate * 2;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                b0 = 0.99886 * b0 + white * 0.0555179;
+                b1 = 0.99332 * b1 + white * 0.0750759;
+                b2 = 0.96900 * b2 + white * 0.1538520;
+                b3 = 0.86650 * b3 + white * 0.3104856;
+                b4 = 0.55000 * b4 + white * 0.5329522;
+                b5 = -0.7616 * b5 - white * 0.0168980;
+                output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.04;
+                b6 = white * 0.115926;
+            }
+
+            const whiteNoise = audioCtx.createBufferSource();
+            whiteNoise.buffer = noiseBuffer;
+            whiteNoise.loop = true;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1100, audioCtx.currentTime);
+
+            const rainGain = audioCtx.createGain();
+            rainGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+
+            whiteNoise.connect(filter);
+            filter.connect(rainGain);
+            rainGain.connect(audioCtx.destination);
+            whiteNoise.start(0);
+            rainNode = { source: whiteNoise, gain: rainGain };
+        }
+
+        // Warm Lo-Fi Rhodes-style chords (Fmaj7 - Em7 - Dm7 - Cmaj7)
+        function startLoFiChords() {
+            if (!audioCtx) return;
+            const chords = [
+                [174.61, 220.00, 261.63, 329.63], // Fmaj7
+                [164.81, 196.00, 246.94, 293.66], // Em7
+                [146.83, 174.61, 220.00, 261.63], // Dm7
+                [130.81, 164.81, 196.00, 246.94]  // Cmaj7
+            ];
+            let chordIdx = 0;
+
+            lofiChordInterval = setInterval(() => {
+                if (gameState.isAudioMuted || !audioCtx || audioCtx.state === 'suspended') return;
+                playLoFiChord(chords[chordIdx]);
+                chordIdx = (chordIdx + 1) % chords.length;
+            }, 3600);
+        }
+
+        function playLoFiChord(frequencies) {
+            frequencies.forEach(freq => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const filter = audioCtx.createBiquadFilter();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                // Slight detuning for vintage tape wobble vibe
+                osc.detune.setValueAtTime((Math.random() - 0.5) * 8, audioCtx.currentTime);
+
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(650, audioCtx.currentTime);
+
+                gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.024, audioCtx.currentTime + 0.6);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 3.4);
+
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 3.5);
+            });
+        }
+
+        // Procedural Sound Effects
+        function playSound(type) {
+            if (gameState.isAudioMuted || !audioCtx) return;
+            const now = audioCtx.currentTime;
+
+            if (type === 'click') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.frequency.setValueAtTime(800, now);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(now + 0.05);
+            } else if (type === 'mug') {
+                // Ceramic gentle clink
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1420, now);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(now + 0.45);
+            } else if (type === 'buzz') {
+                // Phone vibration sound
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(95, now);
+                gain.gain.setValueAtTime(0.07, now);
+                gain.gain.setValueAtTime(0.01, now + 0.08);
+                gain.gain.setValueAtTime(0.07, now + 0.16);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(now + 0.36);
+            } else if (type === 'paper') {
+                // Page turn noise
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(320, now);
+                gain.gain.setValueAtTime(0.04, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(now + 0.18);
+            }
+        }
+
+        const canvas = document.getElementById('lofiCanvas');
+        const ctx = canvas.getContext('2d');
+        let animTick = 0;
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return;
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function drawCoffeeTalkScene() {
+            const rect = canvas.getBoundingClientRect();
+            const w = rect.width;
+            const h = rect.height;
+            if (w === 0 || h === 0) return;
+
+            ctx.clearRect(0, 0, w, h);
+            const t = animTick;
+
+            // 1. Cozy Dark Plum/Amber Kitchen Ambient Gradient
+            const wall = ctx.createLinearGradient(0, 0, 0, h);
+            wall.addColorStop(0, '#160c19');
+            wall.addColorStop(0.5, '#231422');
+            wall.addColorStop(1, '#130a15');
+            ctx.fillStyle = wall;
+            ctx.fillRect(0, 0, w, h);
+
+            // 2. Large Rainy Window looking out over nighttime Rhondda Valley
+            const winX = w * 0.05;
+            const winY = h * 0.06;
+            const winW = w * 0.54;
+            const winH = h * 0.65;
+
+            // Outside Misty Night Sky
+            const skyGrad = ctx.createLinearGradient(0, winY, 0, winY + winH);
+            skyGrad.addColorStop(0, '#0a101f');
+            skyGrad.addColorStop(0.6, '#131e2b');
+            skyGrad.addColorStop(1, '#1b2a26');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(winX, winY, winW, winH);
+
+            // Far Mountain Silhouette in rain
+            ctx.fillStyle = '#080d15';
+            ctx.beginPath();
+            ctx.moveTo(winX, winY + winH);
+            for (let mx = winX; mx <= winX + winW; mx += 20) {
+                const my = winY + winH * 0.45 + Math.sin(mx * 0.02) * 14;
+                ctx.lineTo(mx, my);
+            }
+            ctx.lineTo(winX + winW, winY + winH);
+            ctx.closePath();
+            ctx.fill();
+
+            // Distant Warm Terrace Lights blinking softly through wet glass
+            for (let i = 0; i < 11; i++) {
+                const lx = winX + 25 + i * (winW / 12);
+                const ly = winY + winH * 0.65 + Math.sin(i * 1.8) * 16;
+                const glowPulse = Math.sin(t * 0.04 + i) * 2;
+                ctx.fillStyle = i % 2 === 0 ? 'rgba(251, 191, 36, 0.45)' : 'rgba(56, 189, 248, 0.35)';
+                ctx.beginPath();
+                ctx.arc(lx, ly, 6 + glowPulse, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Procedural Rain Streaming down window glass
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.38)';
+            ctx.lineWidth = 1.4;
+            for (let r = 0; r < 30; r++) {
+                const rx = winX + (r * 24 + t * 0.6) % (winW - 8);
+                const ry = winY + (r * 32 + t * 4.5) % (winH - 12);
+                ctx.beginPath();
+                ctx.moveTo(rx, ry);
+                ctx.lineTo(rx - 1.2, ry + 16);
+                ctx.stroke();
+            }
+
+            // Window Wooden Arch & Frame
+            ctx.strokeStyle = '#361d2e';
+            ctx.lineWidth = 8;
+            ctx.strokeRect(winX, winY, winW, winH);
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#22101e';
+            ctx.strokeRect(winX + 4, winY + 4, winW - 8, winH - 8);
+
+            // 3. Wooden Kitchen Counter / Study Desk
+            const deskY = h * 0.68;
+            const wood = ctx.createLinearGradient(0, deskY, 0, h);
+            wood.addColorStop(0, '#4a251e');
+            wood.addColorStop(0.3, '#301612');
+            wood.addColorStop(1, '#190a07');
+            ctx.fillStyle = wood;
+            ctx.fillRect(0, deskY, w, h - deskY);
+
+            // Countertop Warm Ambient Sheen
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.16)';
+            ctx.fillRect(0, deskY, w, 5);
+
+            // 4. Biology Textbook & Revision Flashcards on counter
+            const bookX = w * 0.08;
+            const bookY = deskY + 12;
+
+            // Open Textbook
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.roundRect(bookX, bookY, 130, 48, 4);
+            ctx.fill();
+            ctx.fillStyle = '#f8fafc';
+            ctx.beginPath();
+            ctx.roundRect(bookX + 4, bookY + 4, 60, 40, 2);
+            ctx.roundRect(bookX + 66, bookY + 4, 60, 40, 2);
+            ctx.fill();
+
+            // Textbook diagram lines
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(bookX + 10, bookY + 8, 22, 18);
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(bookX + 36, bookY + 10, 22, 2);
+            ctx.fillRect(bookX + 36, bookY + 16, 22, 2);
+            ctx.fillRect(bookX + 36, bookY + 22, 18, 2);
+
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillRect(bookX + 72, bookY + 10, 48, 2);
+            ctx.fillRect(bookX + 72, bookY + 16, 48, 2);
+            ctx.fillRect(bookX + 72, bookY + 22, 38, 2);
+
+            // Highlighter Pen (Fluorescent yellow)
+            ctx.fillStyle = '#facc15';
+            ctx.fillRect(bookX + 140, bookY + 20, 34, 7);
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(bookX + 140, bookY + 20, 8, 7);
+
+            // 5. Steaming Ceramic Welsh Stoneware Mug
+            const mugX = w * 0.38;
+            const mugY = deskY - 44;
+
+            // Saucer
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.ellipse(mugX + 22, mugY + 46, 26, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mug Body
+            ctx.fillStyle = '#f1f5f9';
+            ctx.beginPath();
+            ctx.roundRect(mugX, mugY, 44, 46, [3, 3, 10, 10]);
+            ctx.fill();
+
+            // Mug Welsh Dragon motif / Amber trim
+            ctx.fillStyle = '#d97706';
+            ctx.fillRect(mugX, mugY + 18, 44, 6);
+
+            // Handle
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(mugX + 44, mugY + 22, 11, -Math.PI / 2, Math.PI / 2);
+            ctx.stroke();
+
+            // Liquid Tea inside rim
+            const teaColor = gameState.brewedDrink.base === 'chamomile' ? '#d97706' :
+                            (gameState.brewedDrink.base === 'welsh_gold' ? '#78350f' : '#15803d');
+            ctx.fillStyle = teaColor;
+            ctx.beginPath();
+            ctx.ellipse(mugX + 22, mugY + 3, 20, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Procedural Lo-Fi Rising Steam
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+            for (let s = 0; s < 5; s++) {
+                const sy = mugY - 10 - ((t * 1.6 + s * 22) % 55);
+                const sx = mugX + 22 + Math.sin(t * 0.08 + s * 1.2) * 8;
+                const size = 5 + s * 2.2;
+                ctx.beginPath();
+                ctx.arc(sx, sy, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 6. Detailed Close-Up Anime/Pixel Portrait of Seren (Right Side)
+            const pX = w * 0.76;
+            const pY = deskY + 6;
+            const breath = Math.sin(t * 0.06) * 2;
+
+            // Hair Back (Rich warm auburn)
+            ctx.fillStyle = '#3a1705';
+            ctx.beginPath();
+            ctx.arc(pX, pY - 165 - breath, 52, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Left Long Braid draped over shoulder
+            ctx.strokeStyle = '#3a1705';
+            ctx.lineWidth = 18;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(pX - 38, pY - 140 - breath);
+            ctx.quadraticCurveTo(pX - 56, pY - 80 - breath, pX - 42, pY - 20);
+            ctx.stroke();
+
+            // Warm Cozy Cable-Knit Amber Cardigan
+            ctx.fillStyle = '#b45309';
+            ctx.beginPath();
+            ctx.roundRect(pX - 80, pY - 110 - breath, 160, 140, [32, 32, 0, 0]);
+            ctx.fill();
+
+            // Cardigan collar & knit texture
+            ctx.fillStyle = '#92400e';
+            ctx.beginPath();
+            ctx.roundRect(pX - 30, pY - 126 - breath, 60, 28, 8);
+            ctx.fill();
+            ctx.fillStyle = '#fed7aa'; // Shirt under cardigan
+            ctx.fillRect(pX - 18, pY - 108 - breath, 36, 22);
+
+            // Head & Neck
+            ctx.fillStyle = '#fed7aa';
+            ctx.beginPath();
+            ctx.roundRect(pX - 14, pY - 135 - breath, 28, 24, 6);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(pX, pY - 162 - breath, 42, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Soft Rosy Cheeks
+            ctx.fillStyle = 'rgba(244, 114, 182, 0.4)';
+            ctx.beginPath();
+            ctx.ellipse(pX - 22, pY - 154 - breath, 8, 4.5, 0, 0, Math.PI * 2);
+            ctx.ellipse(pX + 22, pY - 154 - breath, 8, 4.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Anime Hair Bangs & Framing
+            ctx.fillStyle = '#451a03';
+            ctx.beginPath();
+            ctx.arc(pX, pY - 176 - breath, 44, Math.PI * 0.88, Math.PI * 2.12);
+            ctx.fill();
+
+            // Bang Strands
+            ctx.beginPath();
+            ctx.moveTo(pX - 38, pY - 166 - breath);
+            ctx.quadraticCurveTo(pX - 25, pY - 146 - breath, pX - 16, pY - 172 - breath);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(pX - 18, pY - 172 - breath);
+            ctx.quadraticCurveTo(pX - 4, pY - 144 - breath, pX + 6, pY - 174 - breath);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(pX + 4, pY - 174 - breath);
+            ctx.quadraticCurveTo(pX + 22, pY - 148 - breath, pX + 38, pY - 166 - breath);
+            ctx.fill();
+
+            // Expressive Eyes (Blinking Logic)
+            const isBlink = (t % 150) > 143;
+            if (isBlink) {
+                ctx.strokeStyle = '#1e1b4b';
+                ctx.lineWidth = 3.5;
+                ctx.beginPath();
+                ctx.moveTo(pX - 26, pY - 160 - breath);
+                ctx.lineTo(pX - 10, pY - 160 - breath);
+                ctx.moveTo(pX + 10, pY - 160 - breath);
+                ctx.lineTo(pX + 26, pY - 160 - breath);
+                ctx.stroke();
+            } else {
+                // Large Anime Eyes
+                ctx.fillStyle = '#1e1b4b';
+                ctx.beginPath();
+                ctx.arc(pX - 18, pY - 160 - breath, 6.5, 0, Math.PI * 2);
+                ctx.arc(pX + 18, pY - 160 - breath, 6.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Sparkle Highlights
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(pX - 20, pY - 162 - breath, 2.5, 0, Math.PI * 2);
+                ctx.arc(pX + 16, pY - 162 - breath, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Nose
+            ctx.fillStyle = '#b45309';
+            ctx.beginPath();
+            ctx.arc(pX, pY - 151 - breath, 1.6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mouth (Subtle thoughtful smile)
+            ctx.strokeStyle = '#92400e';
+            ctx.lineWidth = 2.4;
+            ctx.beginPath();
+            ctx.arc(pX, pY - 143 - breath, 6, 0.15, Math.PI - 0.15);
+            ctx.stroke();
+
+            // Glasses Frame (Reflecting warm desk light)
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(pX - 28, pY - 168 - breath, 20, 16, 4);
+            ctx.roundRect(pX + 8, pY - 168 - breath, 20, 16, 4);
+            ctx.moveTo(pX - 8, pY - 160 - breath);
+            ctx.lineTo(pX + 8, pY - 160 - breath);
+            ctx.stroke();
+
+            // Ambient Warm Light Overlay on Seren's profile
+            const lampGlow = ctx.createRadialGradient(w * 0.25, deskY - 100, 20, w * 0.65, deskY, 400);
+            lampGlow.addColorStop(0, 'rgba(251, 191, 36, 0.12)');
+            lampGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = lampGlow;
+            ctx.fillRect(0, 0, w, h);
+        }
+
+        let typewriterTimeout = null;
+
+        function renderStoryNode(nodeId) {
+            const node = STORY_NODES[nodeId];
+            if (!node) return;
+            gameState.currentNode = nodeId;
+
+            // Header tags
+            document.getElementById('speakerName').innerText = node.speaker;
+            document.getElementById('dialogueTimestamp').innerText = node.timestamp;
+            document.getElementById('thoughtText').innerText = node.thought;
+
+            // Mood tag
+            const moodPill = document.getElementById('serenMoodText');
+            if (moodPill) moodPill.innerText = node.mood;
+
+            // Typewriter effect on dialogue speech
+            const speechEl = document.getElementById('dialogueSpeech');
+            speechEl.innerHTML = '';
+            clearTimeout(typewriterTimeout);
+
+            let charIdx = 0;
+            const fullText = node.speech;
+
+            function typeChar() {
+                if (charIdx < fullText.length) {
+                    speechEl.innerHTML += fullText.charAt(charIdx);
+                    charIdx++;
+                    typewriterTimeout = setTimeout(typeChar, 18);
+                }
+            }
+            typeChar();
+
+            // Render Choice Buttons
+            const choiceBox = document.getElementById('choiceContainer');
+            choiceBox.innerHTML = '';
+
+            node.choices.forEach(ch => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/25 border border-amber-500/30 hover:border-amber-500/60 text-xs sm:text-sm text-amber-100 font-medium transition-all flex items-center justify-between group shadow-sm";
+                btn.innerHTML = `
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-arrow-right text-[11px] text-amber-400 group-hover:translate-x-1 transition-transform"></i>
+                        <span>${ch.text}</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-right text-[10px] text-amber-400/50"></i>
+                `;
+                btn.onclick = () => {
+                    playSound('click');
+                    if (ch.effect) ch.effect();
+                    renderStoryNode(ch.nextNode);
+                };
+                choiceBox.appendChild(btn);
+            });
+        }
+
+        // Tab Navigation
+        function switchRightTab(tabName) {
+            gameState.activeTab = tabName;
+            playSound('click');
+
+            const pStory = document.getElementById('panelStory');
+            const pBrew = document.getElementById('panelBrew');
+            const pPhone = document.getElementById('panelPhone');
+
+            const btnStory = document.getElementById('tabStoryBtn');
+            const btnBrew = document.getElementById('tabBrewBtn');
+            const btnPhone = document.getElementById('tabPhoneBtn');
+
+            // Hide all panels
+            pStory.classList.add('hidden');
+            pBrew.classList.add('hidden');
+            pPhone.classList.add('hidden');
+
+            // Reset tab styling
+            [btnStory, btnBrew, btnPhone].forEach(b => {
+                b.className = "flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent";
+            });
+
+            if (tabName === 'story') {
+                pStory.classList.remove('hidden');
+                btnStory.className = "flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-amber-500/20 text-amber-200 border border-amber-500/30 shadow-md";
+            } else if (tabName === 'brew') {
+                pBrew.classList.remove('hidden');
+                btnBrew.className = "flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-amber-500/20 text-amber-200 border border-amber-500/30 shadow-md";
+            } else if (tabName === 'phone') {
+                pPhone.classList.remove('hidden');
+                btnPhone.className = "flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-amber-500/20 text-amber-200 border border-amber-500/30 shadow-md";
+                renderNotificationsFeed();
+            }
+        }
+
+        function selectTeaBase(baseId) {
+            gameState.brewedDrink.base = baseId;
+            playSound('click');
+            ['chamomile', 'welsh_gold', 'peppermint'].forEach(id => {
+                const btn = document.getElementById(`base-${id}`);
+                if (btn) {
+                    if (id === baseId) {
+                        btn.className = "p-2 rounded-xl border border-amber-500/40 bg-amber-500/20 text-amber-200 text-xs font-semibold text-center hover:bg-amber-500/30";
+                    } else {
+                        btn.className = "p-2 rounded-xl border border-white/10 bg-black/40 text-slate-300 text-xs font-semibold text-center hover:bg-white/10";
+                    }
+                }
+            });
+        }
+
+        function selectTeaAdd(addId) {
+            gameState.brewedDrink.addition = addId;
+            playSound('click');
+            ['welsh_honey', 'lemon_slice', 'spicy_ginger'].forEach(id => {
+                const btn = document.getElementById(`add-${id}`);
+                if (btn) {
+                    if (id === addId) {
+                        btn.className = "p-2 rounded-xl border border-amber-500/40 bg-amber-500/20 text-amber-200 text-xs font-semibold text-center hover:bg-amber-500/30";
+                    } else {
+                        btn.className = "p-2 rounded-xl border border-white/10 bg-black/40 text-slate-300 text-xs font-semibold text-center hover:bg-white/10";
+                    }
+                }
+            });
+        }
+
+        function selectWaterTemp(tempId) {
+            gameState.brewedDrink.temp = tempId;
+            playSound('click');
+            ['perfect', 'boiling'].forEach(id => {
+                const btn = document.getElementById(`temp-${id}`);
+                if (btn) {
+                    if (id === tempId) {
+                        btn.className = "flex-1 py-1.5 rounded-xl border border-amber-500/40 bg-amber-500/20 text-amber-200 text-xs font-medium";
+                    } else {
+                        btn.className = "flex-1 py-1.5 rounded-xl border border-white/10 bg-black/40 text-slate-300 text-xs font-medium";
+                    }
+                }
+            });
+        }
+
+        function submitBrewedDrink() {
+            playSound('mug');
+            const isCorrect = (gameState.brewedDrink.base === 'chamomile' && gameState.brewedDrink.addition === 'welsh_honey');
+
+            if (isCorrect) {
+                modifyStats(+10, +30, +15);
+                showModal(
+                    "fa-solid fa-mug-hot text-amber-400",
+                    "Perfect Soothing Infusion!",
+                    "You remembered Dad's request perfectly: gentle decaf chamomile with local heather honey. He breathed in the steam and his cough settled right down."
+                );
+                switchRightTab('story');
+                renderStoryNode('tea_delivered_success');
+            } else {
+                modifyStats(+5, -10, -5);
+                showModal(
+                    "fa-solid fa-triangle-exclamation text-amber-400",
+                    "A Little Too Strong For Bedtime",
+                    "The drink was too caffeinated or spicy for his tight chest. Dad still appreciated Seren making it, but had trouble falling asleep."
+                );
+                switchRightTab('story');
+                renderStoryNode('tea_delivered_imperfect');
+            }
+        }
+
+        function openBrewingStation() {
+            switchRightTab('brew');
+        }
+
+        function renderNotificationsFeed() {
+            const feed = document.getElementById('notificationsFeed');
+            feed.innerHTML = '';
+
+            if (gameState.unhandledNotifications.length === 0) {
+                feed.innerHTML = `
+                    <div class="p-5 text-center text-xs text-amber-300/60 flex flex-col items-center gap-2">
+                        <i class="fa-solid fa-check-double text-emerald-400 text-lg"></i>
+                        <span>All priority alerts handled! Phone is quiet.</span>
+                    </div>
+                `;
+                document.getElementById('phoneAlertBadge').classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('phoneAlertBadge').classList.remove('hidden');
+
+            gameState.unhandledNotifications.forEach(notif => {
+                const item = document.createElement('div');
+                item.className = "p-3 rounded-2xl bg-black/50 border border-white/10 hover:border-amber-500/40 transition-all flex flex-col gap-2";
+                item.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="${notif.icon}"></i>
+                            <span class="text-xs font-bold text-slate-200">${notif.sender}</span>
+                        </div>
+                        <span class="text-[10px] font-mono text-slate-400">${notif.time}</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-snug">${notif.preview}</p>
+                    <div class="flex items-center justify-end gap-2 pt-1 border-t border-white/5">
+                        <button onclick="handleNotificationAction('${notif.id}')" class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[11px] font-semibold transition-all">
+                            Triage & Respond
+                        </button>
+                    </div>
+                `;
+                feed.appendChild(item);
+            });
+        }
+
+        function handleNotificationAction(notifId) {
+            const notif = gameState.unhandledNotifications.find(n => n.id === notifId);
+            if (!notif) return;
+
+            playSound('click');
+
+            if (notif.actionType === 'homework') {
+                modifyStats(+15, 0, -5);
+                showModal(
+                    "fa-brands fa-whatsapp text-emerald-400",
+                    "Helped Mali With Revision",
+                    "You quickly sent Mali a voice note explaining question 4. You solidified your own understanding of photosynthesis!"
+                );
+            } else if (notif.actionType === 'care') {
+                modifyStats(0, +20, +5);
+                showModal(
+                    "fa-solid fa-prescription-bottle text-sky-400",
+                    "Repeat Prescription Logged",
+                    "You saved the pharmacy collection reminder for tomorrow's walk home from school. Dad's medicine is secure."
+                );
+            } else if (notif.actionType === 'distraction') {
+                modifyStats(-5, 0, +10);
+                showModal(
+                    "fa-brands fa-tiktok text-purple-400",
+                    "Quick Laugh & Decompress",
+                    "You watched Rhys's funny clip about the wet bus stop. It cost 5 minutes of study, but gave you a much-needed laugh."
+                );
+            }
+
+            removeNotification(notifId);
+            renderNotificationsFeed();
+        }
+
+        function removeNotification(notifId) {
+            gameState.unhandledNotifications = gameState.unhandledNotifications.filter(n => n.id !== notifId);
+            if (gameState.unhandledNotifications.length === 0) {
+                document.getElementById('phoneAlertBadge').classList.add('hidden');
+            }
+        }
+
+        function clearSpamNotifications() {
+            playSound('buzz');
+            gameState.unhandledNotifications = gameState.unhandledNotifications.filter(n => n.actionType !== 'distraction');
+            renderNotificationsFeed();
+            showModal(
+                "fa-solid fa-bell-slash text-amber-400",
+                "Do Not Disturb Activated",
+                "Non-urgent notifications silenced until morning. Only family and emergency alerts can get through."
+            );
+        }
+
+        function modifyStats(studyDelta, dadDelta, energyDelta) {
+            gameState.studyProgress = Math.max(0, Math.min(100, gameState.studyProgress + studyDelta));
+            gameState.dadComfort = Math.max(0, Math.min(100, gameState.dadComfort + dadDelta));
+            gameState.serenEnergy = Math.max(0, Math.min(100, gameState.serenEnergy + energyDelta));
+
+            // Update UI elements
+            document.getElementById('studyPctText').innerText = `${gameState.studyProgress}%`;
+            document.getElementById('studyProgressBar').style.width = `${gameState.studyProgress}%`;
+
+            document.getElementById('dadComfortText').innerText = `${gameState.dadComfort}%`;
+            document.getElementById('dadComfortBar').style.width = `${gameState.dadComfort}%`;
+
+            document.getElementById('serenEnergyText').innerText = `${gameState.serenEnergy}%`;
+            document.getElementById('serenEnergyBar').style.width = `${gameState.serenEnergy}%`;
+        }
+
+        function updateObjective(text) {
+            document.getElementById('currentObjectiveText').innerText = `Current Objective: ${text}`;
+        }
+
+        function showModal(iconClass, title, bodyText) {
+            document.getElementById('modalIcon').className = iconClass;
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalBody').innerText = bodyText;
+            document.getElementById('modalOverlay').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            playSound('click');
+            document.getElementById('modalOverlay').classList.add('hidden');
+        }
+
+        function resetGameState() {
+            gameState.studyProgress = 25;
+            gameState.dadComfort = 60;
+            gameState.serenEnergy = 75;
+            gameState.unhandledNotifications = [
+                {
+                    id: 'notif_1',
+                    sender: 'Mali (School Friend)',
+                    app: 'WhatsApp',
+                    time: '20:12',
+                    icon: 'fa-brands fa-whatsapp text-emerald-400',
+                    preview: 'Did Mr Evans say question 4 was on photosynthesis or cell division?? panicking!!',
+                    actionType: 'homework'
+                },
+                {
+                    id: 'notif_2',
+                    sender: 'Valleys Pharmacy',
+                    app: 'SMS Alert',
+                    time: '20:04',
+                    icon: 'fa-solid fa-prescription-bottle-medical text-sky-400',
+                    preview: 'Reminder: Inhaler repeat prescription is ready for collection at Treorchy branch.',
+                    actionType: 'care'
+                }
+            ];
+            modifyStats(0, 0, 0);
+            switchRightTab('story');
+            renderStoryNode('start');
+        }
+
+        const audioBtn = document.getElementById('toggleAudioBtn');
+        audioBtn.addEventListener('click', () => {
+            initAudio();
+            gameState.isAudioMuted = !gameState.isAudioMuted;
+            if (gameState.isAudioMuted) {
+                if (rainNode) rainNode.gain.gain.setValueAtTime(0, audioCtx.currentTime);
+                document.getElementById('audioIcon').className = 'fa-solid fa-volume-xmark';
+                document.getElementById('audioBtnText').innerText = 'Unmute Audio';
+                document.getElementById('trackLabel').innerText = '♪ Audio Muted';
+            } else {
+                if (rainNode) rainNode.gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                document.getElementById('audioIcon').className = 'fa-solid fa-volume-high';
+                document.getElementById('audioBtnText').innerText = 'Mute Audio';
+                document.getElementById('trackLabel').innerText = '♪ Rhondda Rain (Lo-Fi 68 BPM)';
+            }
+        });
+
+        // Initialize Audio on any first touch or click
+        document.body.addEventListener('click', () => {
+            if (!audioCtx) initAudio();
+        }, { once: true });
+
+        document.getElementById('resetLevelBtn').addEventListener('click', () => {
+            playSound('click');
+            resetGameState();
+        });
+
+        function gameLoop() {
+            animTick++;
+            drawCoffeeTalkScene();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = function() {
+            resizeCanvas();
+            renderStoryNode('start');
+            renderNotificationsFeed();
+            gameLoop();
+        };
+    </script>
+</body>
+</html>
