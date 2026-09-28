@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seren's Shift: 16-Bit Retro RPG Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+    <style>
+        .pixel-font { font-family: 'Press Start 2P', monospace; }
+        .pixel-borders {
+            box-shadow: 
+                0 -4px 0 0 #0f172a,
+                0 4px 0 0 #0f172a,
+                -4px 0 0 0 #0f172a,
+                4px 0 0 0 #0f172a;
+        }
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-center p-3 select-none">
+
+    <!-- Top Status Banner -->
+    <header class="w-full max-w-4xl mb-3 flex items-center justify-between bg-slate-900 border-2 border-slate-700 px-4 py-3 rounded-xl shadow-lg">
+        <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></span>
+            <div>
+                <h1 class="pixel-font text-xs sm:text-sm text-amber-400 tracking-wider">SEREN'S SHIFT // 16-BIT RETRO RPG</h1>
+                <p class="text-[11px] text-slate-400 font-sans mt-0.5">Balancing employment barriers with home responsibilities</p>
+            </div>
+        </div>
+        <div class="hidden sm:flex items-center gap-2">
+            <span class="pixel-font text-[9px] bg-slate-800 text-slate-300 px-2.5 py-1.5 rounded border border-slate-700">ARROWS / WASD: MOVE</span>
+            <span class="pixel-font text-[9px] bg-amber-500/20 text-amber-300 px-2.5 py-1.5 rounded border border-amber-500/40">E / SPACE: INTERACT</span>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <div class="relative w-full max-w-4xl aspect-[16/10] bg-black rounded-2xl overflow-hidden border-4 border-slate-800 shadow-2xl flex flex-col justify-between">
+        
+        <!-- Canvas Viewport -->
+        <canvas id="rpgCanvas" class="w-full h-full block absolute inset-0 z-0"></canvas>
+
+        <!-- Top In-Game HUD: Dual Energy & Shift Clock -->
+        <div class="relative z-10 p-3 sm:p-4 flex flex-wrap items-start justify-between gap-3 pointer-events-none">
+            
+            <!-- Left: Stat Gauges -->
+            <div class="flex flex-col gap-2 bg-slate-950/85 border-2 border-slate-700 p-3 rounded-lg shadow-xl min-w-[210px]">
+                <!-- Seren's Energy -->
+                <div>
+                    <div class="flex justify-between items-center mb-1 text-[9px] pixel-font">
+                        <span class="text-amber-400">SEREN ENERGY</span>
+                        <span id="serenEnergyTxt" class="text-white">75%</span>
+                    </div>
+                    <div class="w-full h-3 bg-slate-900 border border-slate-600 rounded-sm overflow-hidden p-0.5">
+                        <div id="serenEnergyBar" class="h-full bg-amber-400 transition-all duration-300 rounded-xs" style="width: 75%;"></div>
+                    </div>
+                </div>
+
+                <!-- Dad's Wellbeing -->
+                <div>
+                    <div class="flex justify-between items-center mb-1 text-[9px] pixel-font">
+                        <span class="text-emerald-400">DAD'S VITALITY</span>
+                        <span id="dadEnergyTxt" class="text-white">70%</span>
+                    </div>
+                    <div class="w-full h-3 bg-slate-900 border border-slate-600 rounded-sm overflow-hidden p-0.5">
+                        <div id="dadEnergyBar" class="h-full bg-emerald-500 transition-all duration-300 rounded-xs" style="width: 70%;"></div>
+                    </div>
+                </div>
+
+                <!-- Boss Suspicion / Warning -->
+                <div>
+                    <div class="flex justify-between items-center mb-1 text-[9px] pixel-font">
+                        <span class="text-rose-400">BOSS FRUSTRATION</span>
+                        <span id="bossTensionTxt" class="text-rose-300">20%</span>
+                    </div>
+                    <div class="w-full h-3 bg-slate-900 border border-slate-600 rounded-sm overflow-hidden p-0.5">
+                        <div id="bossTensionBar" class="h-full bg-rose-500 transition-all duration-300 rounded-xs" style="width: 20%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Time & Shift Progress -->
+            <div class="bg-slate-950/85 border-2 border-slate-700 px-3 py-2 rounded-lg text-right shadow-xl">
+                <div class="text-[9px] pixel-font text-slate-400">VALLEY APOTHECARY</div>
+                <div id="clockDisplay" class="pixel-font text-xs text-amber-400 mt-1">16:15 PM</div>
+                <div id="shiftTaskStatus" class="text-[9px] font-mono text-cyan-300 mt-1">Boxes Restocked: 0/3</div>
+            </div>
+        </div>
+
+        <!-- Phone Buzz Alert (Simulating Young Carer barrier of urgent family calls during shifts) -->
+        <div id="phoneAlertBanner" class="relative z-10 self-center mb-2 px-4 py-2 bg-rose-950/90 border-2 border-rose-500 rounded-lg text-rose-200 pixel-font text-[10px] animate-bounce hidden flex items-center gap-2 pointer-events-auto cursor-pointer">
+            <i class="fa-solid fa-mobile-screen-button text-amber-300 animate-pulse text-sm"></i>
+            <span>PHONE BUZZING: INCOMING TEXT FROM DAD [PRESS P / TAP]</span>
+        </div>
+
+        <!-- Bottom Dialogue & Decision Console Box -->
+        <div id="dialogueContainer" class="relative z-20 m-3 sm:m-4 p-4 bg-slate-950/95 border-4 border-amber-500 rounded-xl shadow-2xl hidden">
+            <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
+                <span id="speakerLabel" class="pixel-font text-xs text-amber-400">MR. GRUFF (SUPERVISOR)</span>
+                <span class="text-[9px] pixel-font text-slate-500">[SPACE / ENTER TO CLOSE]</span>
+            </div>
+            
+            <p id="dialogueText" class="text-xs sm:text-sm font-sans text-slate-200 leading-relaxed min-h-[38px]">
+                "Seren! You're clocked in for inventory, not looking at your screen. Put that away or it's a formal warning!"
+            </p>
+
+            <!-- Interactive Decision Options -->
+            <div id="choiceContainer" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                <!-- Injected dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Virtual Controls (Touch Responsive) -->
+    <footer class="w-full max-w-4xl mt-3 flex items-center justify-between gap-4 sm:hidden">
+        <div class="grid grid-cols-3 gap-1">
+            <div></div>
+            <button id="btnUp" class="w-11 h-11 bg-slate-800 border-2 border-slate-600 rounded flex items-center justify-center text-amber-400 font-bold active:bg-amber-600">▲</button>
+            <div></div>
+            <button id="btnLeft" class="w-11 h-11 bg-slate-800 border-2 border-slate-600 rounded flex items-center justify-center text-amber-400 font-bold active:bg-amber-600">◀</button>
+            <button id="btnDown" class="w-11 h-11 bg-slate-800 border-2 border-slate-600 rounded flex items-center justify-center text-amber-400 font-bold active:bg-amber-600">▼</button>
+            <button id="btnRight" class="w-11 h-11 bg-slate-800 border-2 border-slate-600 rounded flex items-center justify-center text-amber-400 font-bold active:bg-amber-600">▶</button>
+        </div>
+        <div class="flex gap-2">
+            <button id="btnPhone" class="px-3 py-2 bg-rose-900 border-2 border-rose-500 rounded text-rose-200 pixel-font text-[9px] active:bg-rose-700">📱 PHONE</button>
+            <button id="btnAction" class="px-4 py-2 bg-amber-500 border-2 border-amber-300 rounded text-slate-950 pixel-font text-[10px] font-bold active:bg-amber-400">ACTION</button>
+        </div>
+    </footer>
+
+    <!-- Audio Synthesis Engine (Zero external dependencies) -->
+    <script>
+        const AudioFX = {
+            ctx: null,
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) this.ctx = new AudioContext();
+                }
+            },
+            playTone(freq, type = 'square', duration = 0.1, gainVal = 0.08) {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            },
+            blip() { this.playTone(520, 'square', 0.05, 0.05); },
+            interact() { this.playTone(740, 'triangle', 0.12, 0.08); },
+            buzz() { 
+                this.playTone(180, 'sawtooth', 0.15, 0.07);
+                setTimeout(() => this.playTone(160, 'sawtooth', 0.2, 0.07), 160);
+            },
+            success() {
+                this.playTone(440, 'square', 0.08, 0.06);
+                setTimeout(() => this.playTone(660, 'square', 0.12, 0.06), 90);
+                setTimeout(() => this.playTone(880, 'square', 0.18, 0.06), 180);
+            }
+        };
+    </script>
+
+    <!-- Game Engine & 16-Bit World Logic -->
+    <script>
+        const canvas = document.getElementById('rpgCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Internal Retro Virtual Resolution for true crisp 16-bit rasterization
+        const V_WIDTH = 480;
+        const V_HEIGHT = 300;
+
+        // --- GAME STATE SCHEMA ---
+        const gameState = {
+            serenEnergy: 75,
+            dadVitality: 70,
+            bossTension: 20,
+            restockedCount: 0,
+            targetBoxes: 3,
+            phoneVibrating: false,
+            dialogueActive: false,
+            activeChoiceCallback: null,
+            dadNeedsTeaSent: false,
+            dadPillConfirmed: false,
+            bossWarnedPhone: false,
+            gameOver: false,
+            shiftFinished: false,
+            statusMsg: "Shift in progress: restock the pharmacy shelves.",
+            timeIndex: 0
+        };
+
+        // --- PLAYER SPRITE & MOVEMENT ---
+        const player = {
+            x: 80,
+            y: 190,
+            w: 18,
+            h: 26,
+            speed: 2.2,
+            facing: 'down',
+            isMoving: false,
+            walkTick: 0
+        };
+
+        // --- MAP OBSTACLES & PROPS ---
+        const MAP_PROPS = [
+            // Pharmacy Counters & Shelves
+            { id: 'counter_main', x: 140, y: 110, w: 200, h: 26, color: '#334155', label: 'Cash Counter' },
+            { id: 'shelf_meds_1', x: 40, y: 60, w: 100, h: 28, color: '#1e293b', label: 'Cold Prescriptions' },
+            { id: 'shelf_meds_2', x: 180, y: 60, w: 100, h: 28, color: '#1e293b', label: 'Vitamins & Tonics' },
+            { id: 'shelf_meds_3', x: 320, y: 60, w: 100, h: 28, color: '#1e293b', label: 'Repeat Blister Packs' },
+            
+            // Stock Crates on Floor (Interactable Restock Challenge)
+            { id: 'crate_1', x: 60, y: 220, w: 26, h: 22, color: '#92400e', type: 'crate', done: false, label: 'Unsorted Invoices' },
+            { id: 'crate_2', x: 230, y: 220, w: 26, h: 22, color: '#92400e', type: 'crate', done: false, label: 'Paracetamol Crate' },
+            { id: 'crate_3', x: 380, y: 190, w: 26, h: 22, color: '#92400e', type: 'crate', done: false, label: 'Sterile Gauze Packs' },
+
+            // Staff Lockers / Back Area (Safe phone check zone)
+            { id: 'break_corner', x: 420, y: 110, w: 42, h: 50, color: '#1e293b', type: 'break_zone', label: 'Staff Locker Hideaway' }
+        ];
+
+        // Boss NPC (Mr. Gruff)
+        const bossNpc = {
+            x: 230,
+            y: 92,
+            w: 20,
+            h: 28,
+            patrolDir: 1,
+            startX: 170,
+            endX: 300,
+            speed: 0.5
+        };
+
+        // Keyboard tracking
+        const keys = {};
+        window.addEventListener('keydown', (e) => {
+            AudioFX.init();
+            keys[e.key.toLowerCase()] = true;
+            if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) {
+                e.preventDefault();
+            }
+
+            if (e.key === ' ' || e.key.toLowerCase() === 'e') {
+                handleInteraction();
+            }
+            if (e.key.toLowerCase() === 'p') {
+                triggerPhoneMenu();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // Virtual Controls Hookup
+        const bindTouch = (id, keyName) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const start = (ev) => { ev.preventDefault(); AudioFX.init(); keys[keyName] = true; };
+            const end = (ev) => { ev.preventDefault(); keys[keyName] = false; };
+            el.addEventListener('touchstart', start);
+            el.addEventListener('touchend', end);
+            el.addEventListener('mousedown', start);
+            el.addEventListener('mouseup', end);
+        };
+        bindTouch('btnUp', 'arrowup');
+        bindTouch('btnDown', 'arrowdown');
+        bindTouch('btnLeft', 'arrowleft');
+        bindTouch('btnRight', 'arrowright');
+        document.getElementById('btnAction').onclick = () => { AudioFX.init(); handleInteraction(); };
+        document.getElementById('btnPhone').onclick = () => { AudioFX.init(); triggerPhoneMenu(); };
+        document.getElementById('phoneAlertBanner').onclick = () => { AudioFX.init(); triggerPhoneMenu(); };
+
+        // --- TIME SIMULATION & BARRIER EVENTS ---
+        let gameTick = 0;
+        function updateScenarioTimer() {
+            gameTick++;
+            
+            // Subtle energy drain over time
+            if (gameTick % 320 === 0 && !gameState.dialogueActive) {
+                gameState.serenEnergy = Math.max(10, gameState.serenEnergy - 2);
+                gameState.dadVitality = Math.max(15, gameState.dadVitality - 2);
+                updateHudUI();
+            }
+
+            // Periodic Phone buzz event (Father checking in / needing reassurance)
+            if (gameTick === 240 || gameTick === 1200) {
+                if (!gameState.dadPillConfirmed) {
+                    gameState.phoneVibrating = true;
+                    AudioFX.buzz();
+                    document.getElementById('phoneAlertBanner').classList.remove('hidden');
+                }
+            }
+        }
+
+        // --- INTERACTION ENGINE ---
+        function handleInteraction() {
+            if (gameState.dialogueActive) {
+                // If standard notice without choices, close it
+                if (!gameState.activeChoiceCallback) {
+                    closeDialogue();
+                }
+                return;
+            }
+
+            // Check nearby props
+            const nearDist = 32;
+            let interacted = false;
+
+            // 1. Check Crates for Employment Mini-Challenge
+            for (let prop of MAP_PROPS) {
+                if (prop.type === 'crate') {
+                    const cx = prop.x + prop.w / 2;
+                    const cy = prop.y + prop.h / 2;
+                    const d = Math.hypot((player.x + player.w/2) - cx, (player.y + player.h/2) - cy);
+                    if (d < nearDist) {
+                        interactWithCrate(prop);
+                        interacted = true;
+                        break;
+                    }
+                } else if (prop.type === 'break_zone') {
+                    const d = Math.hypot((player.x + player.w/2) - (prop.x + prop.w/2), (player.y + player.h/2) - (prop.y + prop.h/2));
+                    if (d < nearDist + 10) {
+                        interactWithLocker();
+                        interacted = true;
+                        break;
+                    }
+                }
+            }
+
+            // 2. Check Boss proximity
+            if (!interacted) {
+                const bDist = Math.hypot((player.x + player.w/2) - (bossNpc.x + bossNpc.w/2), (player.y + player.h/2) - (bossNpc.y + bossNpc.h/2));
+                if (bDist < nearDist + 8) {
+                    interactWithBoss();
+                    interacted = true;
+                }
+            }
+        }
+
+        function interactWithCrate(crate) {
+            AudioFX.interact();
+            if (crate.done) {
+                openDialogue("STOCK LOG", `This shelf section of "${crate.label}" has already been neatly stacked and logged.`);
+                return;
+            }
+
+            // Challenge Decision: Rush or Steady?
+            openDialogue("EMPLOYMENT TASK: " + crate.label.toUpperCase(),
+                `You have a shipment of heavy medicinal bottles to shelve before the 17:00 courier arrives.`,
+                [
+                    {
+                        text: "Rush task quickly (Saves time, burns -15 Seren Energy)",
+                        effect: () => {
+                            crate.done = true;
+                            gameState.restockedCount++;
+                            gameState.serenEnergy = Math.max(5, gameState.serenEnergy - 15);
+                            gameState.bossTension = Math.max(0, gameState.bossTension - 10);
+                            AudioFX.success();
+                            checkShiftComplete();
+                            closeDialogue();
+                        }
+                    },
+                    {
+                        text: "Pace yourself safely (Conserves energy, takes longer)",
+                        effect: () => {
+                            crate.done = true;
+                            gameState.restockedCount++;
+                            gameState.serenEnergy = Math.max(5, gameState.serenEnergy - 5);
+                            gameState.bossTension = Math.min(100, gameState.bossTension + 5);
+                            AudioFX.success();
+                            checkShiftComplete();
+                            closeDialogue();
+                        }
+                    }
+                ]
+            );
+        }
+
+        function interactWithLocker() {
+            AudioFX.interact();
+            openDialogue("STAFF CORNER / LOCKERS",
+                "Out of Mr. Gruff's line of sight behind the dispensary board. You can take a 20-second breather or discreetly message home.",
+                [
+                    {
+                        text: "Rest for 1 minute (+15 Seren Energy, risk losing shift time)",
+                        effect: () => {
+                            gameState.serenEnergy = Math.min(100, gameState.serenEnergy + 15);
+                            AudioFX.success();
+                            closeDialogue();
+                        }
+                    },
+                    {
+                        text: "Check Dad's Pill Reminder app discreetly",
+                        effect: () => {
+                            triggerPhoneMenu();
+                        }
+                    }
+                ]
+            );
+        }
+
+        function interactWithBoss() {
+            AudioFX.interact();
+            if (gameState.bossTension >= 70) {
+                openDialogue("MR. GRUFF (SUPERVISOR)",
+                    `"Collins! You look distracted and I caught you staring at your pocket three times. When you are on my clock, you are on the floor! If you can't commit to retail hours, tell me now."`,
+                    [
+                        {
+                            text: "Apologize & absorb the blame (Protects job, -20 Seren Energy)",
+                            effect: () => {
+                                gameState.bossTension = Math.max(30, gameState.bossTension - 20);
+                                gameState.serenEnergy = Math.max(5, gameState.serenEnergy - 20);
+                                closeDialogue();
+                            }
+                        },
+                        {
+                            text: "Explain calmly: 'My Dad is unwell, I'm checking his dosage.'",
+                            effect: () => {
+                                // Real barrier experienced by young carers in employment
+                                gameState.bossTension = Math.max(10, gameState.bossTension - 10);
+                                gameState.serenEnergy = Math.max(5, gameState.serenEnergy - 5);
+                                openDialogue("MR. GRUFF (SUPERVISOR)", 
+                                    `"Look... I understand family comes first, Seren. But I have queues to manage. Keep your phone in the locker, and let me know at the start of your shift next time."`);
+                            }
+                        }
+                    ]
+                );
+            } else {
+                openDialogue("MR. GRUFF (SUPERVISOR)",
+                    `"Keep going with those three boxes, Seren. Valley deliveries arrive at 17:00. Once you're done, you can clock out."`
+                );
+            }
+        }
+
+        // Phone Dilemma (The classic barrier: Checking family vs. Employer strict rules)
+        function triggerPhoneMenu() {
+            gameState.phoneVibrating = false;
+            document.getElementById('phoneAlertBanner').classList.add('hidden');
+            AudioFX.buzz();
+
+            // Check if Seren is in plain view of boss
+            const inClearSight = (player.x > 130 && player.x < 360 && player.y < 180);
+
+            openDialogue("DISCREET PHONE TEXT // DAD",
+                `[Message 16:14]: "Hi Seren cariad, forgot if the red prescription pill is before food or after? Feeling a bit dizzy."`,
+                [
+                    {
+                        text: "Reply immediately with instructions (+25 Dad Vitality, Boss gets angry if near)",
+                        effect: () => {
+                            gameState.dadVitality = Math.min(100, gameState.dadVitality + 25);
+                            gameState.dadPillConfirmed = true;
+                            if (inClearSight) {
+                                gameState.bossTension = Math.min(100, gameState.bossTension + 35);
+                                openDialogue("CAUGHT ON PHONE!", "Mr. Gruff saw you typing by the till! 'No personal phones during shop floor hours!' (+35 Boss Frustration)");
+                            } else {
+                                closeDialogue();
+                            }
+                        }
+                    },
+                    {
+                        text: "Ignore until shift end (Avoid employer trouble, -30 Dad Vitality)",
+                        effect: () => {
+                            gameState.dadVitality = Math.max(10, gameState.dadVitality - 30);
+                            gameState.serenEnergy = Math.max(5, gameState.serenEnergy - 15);
+                            closeDialogue();
+                        }
+                    },
+                    {
+                        text: "Ask coworker / Duck into locker room to phone safely",
+                        effect: () => {
+                            player.x = 430;
+                            player.y = 130;
+                            gameState.dadVitality = Math.min(100, gameState.dadVitality + 20);
+                            gameState.serenEnergy = Math.max(5, gameState.serenEnergy - 8);
+                            closeDialogue();
+                        }
+                    }
+                ]
+            );
+        }
+
+        function checkShiftComplete() {
+            if (gameState.restockedCount >= gameState.targetBoxes) {
+                gameState.shiftFinished = true;
+                setTimeout(() => {
+                    openDialogue("SHIFT COMPLETED // WORKSHOP REFLECTION",
+                        `Shift complete! You balanced inventory tasks while managing emergency carer alerts. \n\nFinal Stats -> Seren Energy: ${gameState.serenEnergy}% | Dad Vitality: ${gameState.dadVitality}% | Supervisor Rapport: ${100 - gameState.bossTension}%. How did balancing these dual pressures feel?`,
+                        [
+                            {
+                                text: "Restart Demo Scenario",
+                                effect: () => { location.reload(); }
+                            }
+                        ]
+                    );
+                }, 400);
+            }
+        }
+
+        // --- DIALOGUE UI MANAGER ---
+        function openDialogue(speaker, text, choices = null) {
+            gameState.dialogueActive = true;
+            document.getElementById('dialogueContainer').classList.remove('hidden');
+            document.getElementById('speakerLabel').innerText = speaker;
+            document.getElementById('dialogueText').innerText = text;
+
+            const choiceBox = document.getElementById('choiceContainer');
+            choiceBox.innerHTML = '';
+
+            if (choices && choices.length > 0) {
+                gameState.activeChoiceCallback = true;
+                choices.forEach((c) => {
+                    const btn = document.createElement('button');
+                    btn.className = "w-full text-left p-2.5 rounded bg-slate-900 border border-amber-500/50 hover:bg-amber-500 hover:text-slate-950 text-slate-200 text-xs font-sans transition-all duration-150 flex items-center justify-between";
+                    btn.innerHTML = `<span>▶ ${c.text}</span>`;
+                    btn.onclick = () => {
+                        AudioFX.blip();
+                        c.effect();
+                        updateHudUI();
+                    };
+                    choiceBox.appendChild(btn);
+                });
+            } else {
+                gameState.activeChoiceCallback = false;
+                const closeBtn = document.createElement('button');
+                closeBtn.className = "w-full text-center py-2 bg-slate-800 border border-slate-600 hover:bg-slate-700 text-slate-300 rounded text-xs pixel-font";
+                closeBtn.innerText = "[OK / CONTINUE]";
+                closeBtn.onclick = () => closeDialogue();
+                choiceBox.appendChild(closeBtn);
+            }
+            updateHudUI();
+        }
+
+        function closeDialogue() {
+            gameState.dialogueActive = false;
+            gameState.activeChoiceCallback = null;
+            document.getElementById('dialogueContainer').classList.add('hidden');
+            updateHudUI();
+        }
+
+        function updateHudUI() {
+            document.getElementById('serenEnergyTxt').innerText = `${gameState.serenEnergy}%`;
+            document.getElementById('serenEnergyBar').style.width = `${gameState.serenEnergy}%`;
+            
+            document.getElementById('dadEnergyTxt').innerText = `${gameState.dadVitality}%`;
+            document.getElementById('dadEnergyBar').style.width = `${gameState.dadVitality}%`;
+
+            document.getElementById('bossTensionTxt').innerText = `${gameState.bossTension}%`;
+            document.getElementById('bossTensionBar').style.width = `${gameState.bossTension}%`;
+
+            document.getElementById('shiftTaskStatus').innerText = `Boxes Restocked: ${gameState.restockedCount}/${gameState.targetBoxes}`;
+        }
+
+        // --- PHYSICS & COLLISION ---
+        function checkCollisions(newX, newY) {
+            // Screen boundaries
+            if (newX < 14 || newX + player.w > V_WIDTH - 14) return true;
+            if (newY < 48 || newY + player.h > V_HEIGHT - 20) return true;
+
+            // Props Collision
+            for (let prop of MAP_PROPS) {
+                // If it's a finished crate, permit walking near it
+                if (newX < prop.x + prop.w &&
+                    newX + player.w > prop.x &&
+                    newY < prop.y + prop.h &&
+                    newY + player.h > prop.y) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function updateGame() {
+            updateScenarioTimer();
+
+            // Boss Patrol Routine
+            bossNpc.x += bossNpc.speed * bossNpc.patrolDir;
+            if (bossNpc.x > bossNpc.endX) bossNpc.patrolDir = -1;
+            if (bossNpc.x < bossNpc.startX) bossNpc.patrolDir = 1;
+
+            if (gameState.dialogueActive) return;
+
+            let dx = 0;
+            let dy = 0;
+            player.isMoving = false;
+
+            if (keys['arrowup'] || keys['w']) { dy -= player.speed; player.facing = 'up'; player.isMoving = true; }
+            if (keys['arrowdown'] || keys['s']) { dy += player.speed; player.facing = 'down'; player.isMoving = true; }
+            if (keys['arrowleft'] || keys['a']) { dx -= player.speed; player.facing = 'left'; player.isMoving = true; }
+            if (keys['arrowright'] || keys['d']) { dx += player.speed; player.facing = 'right'; player.isMoving = true; }
+
+            // Diagonal normalization
+            if (dx !== 0 && dy !== 0) {
+                dx *= 0.707;
+                dy *= 0.707;
+            }
+
+            if (player.isMoving) {
+                player.walkTick++;
+                if (!checkCollisions(player.x + dx, player.y)) player.x += dx;
+                if (!checkCollisions(player.x, player.y + dy)) player.y += dy;
+            }
+        }
+
+        // --- 16-BIT RETRO GRAPHICS RENDERING ENGINE ---
+        function render16BitWorld() {
+            ctx.imageSmoothingEnabled = false;
+
+            // 1. Tiled Wooden Apothecary Floorboards
+            for (let y = 0; y < V_HEIGHT; y += 16) {
+                for (let x = 0; x < V_WIDTH; x += 32) {
+                    const alt = (Math.floor(x / 32) + Math.floor(y / 16)) % 2 === 0;
+                    ctx.fillStyle = alt ? '#271c19' : '#1e1412';
+                    ctx.fillRect(x, y, 32, 16);
+
+                    // Plank dividing line
+                    ctx.fillStyle = '#140c0a';
+                    ctx.fillRect(x, y + 15, 32, 1);
+                    ctx.fillRect(x + 31, y, 1, 16);
+                }
+            }
+
+            // 2. Backwall with Welsh Victorian Wainscotting
+            ctx.fillStyle = '#131b26';
+            ctx.fillRect(0, 0, V_WIDTH, 48);
+            ctx.fillStyle = '#0b1017';
+            ctx.fillRect(0, 44, V_WIDTH, 4);
+
+            // Wall framed certificates / vintage apothecary signs
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(80, 14, 28, 20);
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(82, 16, 24, 16);
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(360, 14, 34, 18);
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(362, 16, 30, 14);
+
+            // 3. Render Level Props & Dispensary Shelving
+            for (let prop of MAP_PROPS) {
+                if (prop.type === 'crate') {
+                    // 16-Bit Crate with strapping
+                    ctx.fillStyle = prop.done ? '#475569' : '#92400e';
+                    ctx.fillRect(prop.x, prop.y, prop.w, prop.h);
+
+                    ctx.fillStyle = prop.done ? '#334155' : '#78350f';
+                    ctx.strokeRect(prop.x + 0.5, prop.y + 0.5, prop.w - 1, prop.h - 1);
+
+                    // Cross bracing
+                    ctx.strokeStyle = prop.done ? '#1e293b' : '#b45309';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(prop.x + 2, prop.y + 2);
+                    ctx.lineTo(prop.x + prop.w - 2, prop.y + prop.h - 2);
+                    ctx.moveTo(prop.x + prop.w - 2, prop.y + 2);
+                    ctx.lineTo(prop.x + 2, prop.y + prop.h - 2);
+                    ctx.stroke();
+
+                    // Prompt Icon above pending crates
+                    if (!prop.done) {
+                        const bounce = Math.sin(gameTick * 0.15) * 3;
+                        ctx.fillStyle = '#facc15';
+                        ctx.fillRect(prop.x + prop.w/2 - 2, prop.y - 10 + bounce, 4, 6);
+                        ctx.fillRect(prop.x + prop.w/2 - 2, prop.y - 2 + bounce, 4, 2);
+                    }
+                } else if (prop.type === 'break_zone') {
+                    // Staff locker alcove
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(prop.x, prop.y, prop.w, prop.h);
+                    ctx.fillStyle = '#334155';
+                    ctx.fillRect(prop.x + 2, prop.y + 2, prop.w - 4, prop.h - 4);
+                    // Locker vents
+                    ctx.fillStyle = '#0f172a';
+                    for (let l = 0; l < 3; l++) {
+                        ctx.fillRect(prop.x + 8, prop.y + 8 + l * 12, prop.w - 16, 2);
+                    }
+                    ctx.fillStyle = '#22c55e';
+                    ctx.font = '7px monospace';
+                    ctx.fillText("BREAK", prop.x + 6, prop.y - 3);
+                } else {
+                    // Counters & Medicine Display cases
+                    ctx.fillStyle = '#334155';
+                    ctx.fillRect(prop.x, prop.y, prop.w, prop.h);
+
+                    // Glass sheen / Medicine Bottles
+                    ctx.fillStyle = '#475569';
+                    ctx.fillRect(prop.x + 2, prop.y + 2, prop.w - 4, 8);
+
+                    // Colorful pill bottle pixel clusters
+                    const colors = ['#ef4444', '#38bdf8', '#22c55e', '#facc15', '#a855f7'];
+                    for (let bx = prop.x + 6; bx < prop.x + prop.w - 6; bx += 8) {
+                        ctx.fillStyle = colors[(bx) % colors.length];
+                        ctx.fillRect(bx, prop.y + 12, 4, 8);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(bx + 1, prop.y + 10, 2, 2); // Cap
+                    }
+                }
+            }
+
+            // 4. Render Supervisor NPC (Mr. Gruff)
+            drawBossSprite(bossNpc.x, bossNpc.y);
+
+            // 5. Render Seren Sprite (16-Bit Style: Yellow coat, satchel, braided hair)
+            drawSerenSprite(player.x, player.y, player.facing, player.isMoving, player.walkTick);
+
+            // Ambient Warm Lighting over shop
+            ctx.fillStyle = 'rgba(245, 158, 11, 0.04)';
+            ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+        }
+
+        // --- 16-BIT CHARACTER SPRITE RENDERERS ---
+        function drawSerenSprite(x, y, facing, isMoving, tick) {
+            const step = isMoving ? Math.floor(tick / 8) % 2 : 0;
+            const legOffset = step === 0 ? 0 : 2;
+
+            // Sprite Drop Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.fillRect(x + 2, y + player.h - 3, player.w - 4, 4);
+
+            // Boots
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(x + 3, y + player.h - 6 + legOffset, 5, 5);
+            ctx.fillRect(x + player.w - 8, y + player.h - 6 - legOffset, 5, 5);
+
+            // Fisherman Yellow Raincoat Body
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(x + 2, y + 10, player.w - 4, 12);
+            // Coat highlight & shadow
+            ctx.fillStyle = '#d97706';
+            ctx.fillRect(x + 2, y + 10, 3, 12);
+            ctx.fillStyle = '#fde047';
+            ctx.fillRect(x + player.w - 5, y + 10, 3, 12);
+
+            // Satchel strap across coat
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(x + 3, y + 12, player.w - 6, 2);
+
+            // Head / Skin
+            ctx.fillStyle = '#fed7aa';
+            ctx.fillRect(x + 4, y + 2, player.w - 8, 8);
+
+            // Auburn Hair & Braid
+            ctx.fillStyle = '#451a03';
+            ctx.fillRect(x + 3, y, player.w - 6, 4);
+            if (facing === 'left') {
+                ctx.fillRect(x + 10, y + 3, 4, 10); // Braid trailing right
+                // Eyes
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(x + 5, y + 5, 2, 2);
+            } else if (facing === 'right') {
+                ctx.fillRect(x + 2, y + 3, 4, 10); // Braid trailing left
+                // Eyes
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(x + player.w - 7, y + 5, 2, 2);
+            } else {
+                // Facing front or back
+                ctx.fillRect(x + 1, y + 3, 3, 12); // Left Braid
+                if (facing === 'down') {
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(x + 6, y + 5, 2, 2);
+                    ctx.fillRect(x + player.w - 8, y + 5, 2, 2);
+                }
+            }
+        }
+
+        function drawBossSprite(x, y) {
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.fillRect(x + 2, y + bossNpc.h - 3, bossNpc.w - 4, 4);
+
+            // Legs / Dark slacks
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(x + 4, y + bossNpc.h - 8, 4, 7);
+            ctx.fillRect(x + bossNpc.w - 8, y + bossNpc.h - 8, 4, 7);
+
+            // Grey Supervisor Waistcoat
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(x + 2, y + 9, bossNpc.w - 4, 12);
+            // Tie
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(x + bossNpc.w/2 - 1, y + 10, 2, 7);
+
+            // Head / Skin
+            ctx.fillStyle = '#fbcfe8';
+            ctx.fillRect(x + 4, y + 2, bossNpc.w - 8, 7);
+
+            // Grey hair & moustache
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(x + 3, y, bossNpc.w - 6, 3);
+            ctx.fillRect(x + 6, y + 6, bossNpc.w - 12, 2);
+
+            // Name badge
+            ctx.fillStyle = '#facc15';
+            ctx.fillRect(x + 4, y + 11, 3, 2);
+        }
+
+        // --- MAIN CANVAS LOOP ---
+        function loop() {
+            updateGame();
+
+            // Render internally at retro virtual resolution
+            render16BitWorld();
+
+            requestAnimationFrame(loop);
+        }
+
+        // High-DPI canvas autoscaling to keep native pixels sharp
+        function setupCanvas() {
+            canvas.width = V_WIDTH;
+            canvas.height = V_HEIGHT;
+        }
+
+        window.onload = () => {
+            setupCanvas();
+            updateHudUI();
+            loop();
+        };
+
+        window.addEventListener('resize', setupCanvas);
+    </script>
+</body>
+</html>
