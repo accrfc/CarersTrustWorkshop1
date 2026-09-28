@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Seren's Journey - Game Boy Classic Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #0f1412;
+      touch-action: manipulation;
+      font-family: 'Press Start 2P', monospace;
+    }
+    /* Authentic 4-shade Game Boy DMG screen bezel & filter */
+    .gb-bezel {
+      background: #8b956d;
+      border: 14px solid #5a6349;
+      box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.45), 0 10px 30px rgba(0,0,0,0.7);
+    }
+    .pixelated {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .d-btn:active {
+      transform: scale(0.92);
+      filter: brightness(0.8);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-200 flex flex-col items-center justify-center p-2 sm:p-4 select-none">
+
+  <!-- Main Game Frame -->
+  <div class="w-full max-w-xl flex flex-col items-center gap-3">
+    
+    <!-- Top Header & Context -->
+    <div class="w-full flex items-center justify-between text-[10px] text-emerald-400/90 tracking-wider px-2">
+      <span>PROMO CYMRU • CARERS TRUST</span>
+      <span>GAME BOY CLASSIC</span>
+    </div>
+
+    <!-- Handheld Bezel Container -->
+    <div class="gb-bezel rounded-2xl p-3 sm:p-5 w-full flex flex-col items-center">
+      
+      <!-- Top Brand Line -->
+      <div class="w-full flex items-center justify-between mb-2 px-1 text-[9px] text-[#2c381c]">
+        <div class="flex items-center gap-1.5 font-bold">
+          <span class="inline-block w-2 h-2 rounded-full bg-[#3d4b27] animate-pulse"></span>
+          <span>BATTERY OK</span>
+        </div>
+        <div class="tracking-widest font-black text-[10px]">POCKET CARER SYSTEM</div>
+      </div>
+
+      <!-- Canvas Screen (160x144 Native Scaled) -->
+      <div class="relative w-full aspect-[160/144] bg-[#9bbc0f] rounded border-4 border-[#2c381c] overflow-hidden shadow-inner">
+        <canvas id="gameCanvas" width="160" height="144" class="pixelated w-full h-full block"></canvas>
+      </div>
+
+      <!-- Live Dual Status Meter readout below screen (Game Boy aesthetic) -->
+      <div class="w-full mt-3 bg-[#808b64] border-2 border-[#2c381c] p-2 rounded flex flex-col gap-1.5 text-[9px] text-[#0f380f]">
+        <div class="flex items-center justify-between">
+          <span class="font-bold">SEREN (WELLBEING):</span>
+          <span id="serenStatusVal" class="font-bold">75%</span>
+        </div>
+        <div class="w-full bg-[#306230] h-2 rounded-none p-[1px]">
+          <div id="serenBar" class="bg-[#9bbc0f] h-full transition-all duration-300" style="width: 75%"></div>
+        </div>
+
+        <div class="flex items-center justify-between mt-0.5">
+          <span class="font-bold">DAD (CARE STABILITY):</span>
+          <span id="dadStatusVal" class="font-bold">70%</span>
+        </div>
+        <div class="w-full bg-[#306230] h-2 rounded-none p-[1px]">
+          <div id="dadBar" class="bg-[#9bbc0f] h-full transition-all duration-300" style="width: 70%"></div>
+        </div>
+      </div>
+
+      <!-- On-Screen Controls (Desktop & Mobile Friendly) -->
+      <div class="w-full mt-4 flex items-center justify-between px-2">
+        <!-- D-PAD -->
+        <div class="grid grid-cols-3 gap-1 w-28 h-28">
+          <div></div>
+          <button id="btnUp" class="d-btn bg-[#2c381c] text-[#9bbc0f] rounded-t flex items-center justify-center text-xs font-bold shadow active:bg-black">▲</button>
+          <div></div>
+          <button id="btnLeft" class="d-btn bg-[#2c381c] text-[#9bbc0f] rounded-l flex items-center justify-center text-xs font-bold shadow active:bg-black">◀</button>
+          <div class="bg-[#202914]"></div>
+          <button id="btnRight" class="d-btn bg-[#2c381c] text-[#9bbc0f] rounded-r flex items-center justify-center text-xs font-bold shadow active:bg-black">▶</button>
+          <div></div>
+          <button id="btnDown" class="d-btn bg-[#2c381c] text-[#9bbc0f] rounded-b flex items-center justify-center text-xs font-bold shadow active:bg-black">▼</button>
+          <div></div>
+        </div>
+
+        <!-- Action Buttons (B & A) -->
+        <div class="flex gap-3 items-center -rotate-12">
+          <div class="flex flex-col items-center">
+            <button id="btnB" class="d-btn w-11 h-11 rounded-full bg-[#4d162a] text-[#f8b888] font-bold text-xs shadow-lg border border-black/30 flex items-center justify-center active:bg-black">B</button>
+            <span class="text-[8px] text-[#2c381c] mt-1 font-bold">CANCEL</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <button id="btnA" class="d-btn w-11 h-11 rounded-full bg-[#4d162a] text-[#f8b888] font-bold text-xs shadow-lg border border-black/30 flex items-center justify-center active:bg-black">A</button>
+            <span class="text-[8px] text-[#2c381c] mt-1 font-bold">TALK/YES</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Instruction Help Bar -->
+    <div class="text-[9px] text-slate-400 text-center leading-relaxed">
+      Keyboard: <span class="text-amber-400">WASD / Arrow Keys</span> to walk &bull; <span class="text-amber-400">[E]</span> or <span class="text-amber-400">[SPACE]</span> to interact &bull; Touch d-pad supported
+    </div>
+
+  </div>
+
+  <script>
+    /* ============================================================
+       1. GAME BOY AUDIO SYNTHESIZER (Web Audio API)
+       ============================================================ */
+    const AudioEngine = {
+      ctx: null,
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      },
+      playTone(freq, duration, type = 'square', gainVal = 0.05) {
+        try {
+          this.init();
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {}
+      },
+      beep() { this.playTone(440, 0.08, 'square', 0.04); },
+      talk() { this.playTone(280 + Math.random() * 80, 0.04, 'square', 0.03); },
+      success() {
+        this.playTone(523.25, 0.1, 'square', 0.05);
+        setTimeout(() => this.playTone(659.25, 0.12, 'square', 0.05), 100);
+        setTimeout(() => this.playTone(783.99, 0.22, 'square', 0.05), 220);
+      },
+      dilemma() {
+        this.playTone(330, 0.12, 'square', 0.06);
+        setTimeout(() => this.playTone(293, 0.18, 'square', 0.06), 130);
+      }
+    };
+
+    /* ============================================================
+       2. COLOR PALETTE CONSTANTS (Authentic 4-color GB DMG)
+       ============================================================ */
+    const GB = {
+      WHITE: '#9bbc0f', // Lightest / background green-yellow
+      LIGHT: '#8bac0f', // Mid-light
+      DARK:  '#306230', // Mid-dark
+      BLACK: '#0f380f'  // Deepest black-green
+    };
+
+    /* ============================================================
+       3. LEVEL DATA & DIALOGUE TREE (Social vs Caring Scenario)
+       ============================================================ */
+    const gameState = {
+      serenWellbeing: 75,
+      dadCare: 70,
+      inventory: {
+        prescription: false,
+        pickedUpMedicine: false
+      },
+      flags: {
+        talkedToMali: false,
+        hungOutWithMali: false,
+        walkedPastMali: false,
+        checkedDad: false,
+        visitedChemist: false,
+        questCompleted: false
+      },
+      currentDialogue: null,
+      activeChoiceIndex: 0
+    };
+
+    // Dialogue nodes
+    const DIALOGUES = {
+      mali_intro: {
+        speaker: 'MALI',
+        lines: [
+          'Seren! Over here!',
+          'We\'re playing rounders at the court.',
+          'You never come out on Saturdays anymore...',
+          'Can you hang out for an hour?'
+        ],
+        choices: [
+          {
+            text: 'Play for a bit (+Wellbeing, -Dad care)',
+            action: () => {
+              gameState.serenWellbeing = Math.min(100, gameState.serenWellbeing + 20);
+              gameState.dadCare = Math.max(25, gameState.dadCare - 20);
+              gameState.flags.hungOutWithMali = true;
+              gameState.flags.talkedToMali = true;
+              AudioEngine.success();
+              setDialogue('mali_stayed');
+            }
+          },
+          {
+            text: 'I have to get Dad\'s meds first.',
+            action: () => {
+              gameState.serenWellbeing = Math.max(30, gameState.serenWellbeing - 10);
+              gameState.dadCare = Math.min(100, gameState.dadCare + 10);
+              gameState.flags.walkedPastMali = true;
+              gameState.flags.talkedToMali = true;
+              AudioEngine.dilemma();
+              setDialogue('mali_declined');
+            }
+          }
+        ]
+      },
+      mali_stayed: {
+        speaker: 'MALI',
+        lines: [
+          'Yes! It feels like old times!',
+          'You laugh and catch up for 40 mins.',
+          'Your mind clears, but the time is ticking.',
+          'Don\'t forget the chemist closes soon!'
+        ]
+      },
+      mali_declined: {
+        speaker: 'MALI',
+        lines: [
+          'Oh... I get it. Your dad needs you.',
+          'We really miss having you around.',
+          'Text me later if you\'re free, okay?'
+        ]
+      },
+      mali_done: {
+        speaker: 'MALI',
+        lines: [
+          'Thanks for talking with me Seren.',
+          'Hurry before the chemist closes at noon!'
+        ]
+      },
+      chemist_closed_no_rx: {
+        speaker: 'VALLEY PHARMACY',
+        lines: [
+          'PHARMACY NOTICE:',
+          'Please bring Dad\'s repeat prescription slip',
+          'from the cottage hallway before collecting.'
+        ]
+      },
+      chemist_pickup: {
+        speaker: 'CHEMIST',
+        lines: [
+          'Hello Seren! Here is your dad\'s weekly pack.',
+          'You\'re doing a wonderful job keeping on top of it.'
+        ],
+        onClose: () => {
+          gameState.inventory.pickedUpMedicine = true;
+          gameState.flags.visitedChemist = true;
+          gameState.dadCare = Math.min(100, gameState.dadCare + 20);
+          AudioEngine.success();
+        }
+      },
+      chemist_already_done: {
+        speaker: 'CHEMIST',
+        lines: [
+          'Take that pack right home to Dad, Seren!'
+        ]
+      },
+      home_door_needs_rx: {
+        speaker: 'SEREN\'S COTTAGE',
+        lines: [
+          'Dad is resting inside.',
+          'You collected his repeat prescription slip!'
+        ],
+        onClose: () => {
+          gameState.inventory.prescription = true;
+          AudioEngine.beep();
+        }
+      },
+      home_deliver_meds: {
+        speaker: 'DAD',
+        lines: [
+          '"Diolch, Seren bach. The chemist was prompt."',
+          'Dad sits up and drinks a warm cup of water.',
+          'Care Stability is secure!',
+          'DEMO COMPLETE: Thank you for playing!'
+        ],
+        onClose: () => {
+          gameState.flags.questCompleted = true;
+          AudioEngine.success();
+        }
+      },
+      notice_board: {
+        speaker: 'YOUTH CLUB NOTICE',
+        lines: [
+          'ROUNDERS TOURNAMENT: 11:30 AM',
+          'FREE PIZZA & CHILL ROOM',
+          '"Missing out stings, but balance is key."'
+        ]
+      }
+    };
+
+    /* ============================================================
+       4. GAME ENGINE & STATE MANAGEMENT
+       ============================================================ */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // 160x144 Game Boy Resolution
+    const SCREEN_W = 160;
+    const SCREEN_H = 144;
+    const TILE_SIZE = 16;
+
+    // Player Object
+    const player = {
+      x: 32,
+      y: 80,
+      w: 12,
+      h: 12,
+      speed: 1.1,
+      facing: 'down',
+      animStep: 0,
+      isMoving: false
+    };
+
+    // NPCs & Interactivity World
+    const entities = [
+      { id: 'mali', x: 104, y: 72, w: 14, h: 14, type: 'npc', name: 'Mali' },
+      { id: 'chemist', x: 124, y: 32, w: 14, h: 14, type: 'door', name: 'Pharmacy' },
+      { id: 'home', x: 28, y: 44, w: 14, h: 14, type: 'door', name: 'Home' },
+      { id: 'board', x: 80, y: 36, w: 12, h: 12, type: 'sign', name: 'Notice Board' }
+    ];
+
+    // Solid collision boxes
+    const solids = [
+      // Seren's cottage
+      { x: 16, y: 16, w: 40, h: 28 },
+      // Valley Pharmacy
+      { x: 108, y: 16, w: 40, h: 22 },
+      // Notice Board post
+      { x: 78, y: 34, w: 14, h: 10 },
+      // Sports court chain link fences
+      { x: 88, y: 64, w: 64, h: 6 },
+      { x: 152, y: 64, w: 8, h: 56 },
+      { x: 88, y: 114, w: 64, h: 6 },
+      // Screen borders
+      { x: -10, y: 0, w: 10, h: SCREEN_H },
+      { x: SCREEN_W, y: 0, w: 10, h: SCREEN_H },
+      { x: 0, y: -10, w: SCREEN_W, h: 10 },
+      { x: 0, y: SCREEN_H - 12, w: SCREEN_W, h: 14 }
+    ];
+
+    // Input tracker
+    const keys = {
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+      a: false,
+      b: false
+    };
+
+    function updateBars() {
+      document.getElementById('serenStatusVal').innerText = `${gameState.serenWellbeing}%`;
+      document.getElementById('serenBar').style.width = `${gameState.serenWellbeing}%`;
+      document.getElementById('dadStatusVal').innerText = `${gameState.dadCare}%`;
+      document.getElementById('dadBar').style.width = `${gameState.dadCare}%`;
+    }
+
+    function setDialogue(nodeKey) {
+      const node = DIALOGUES[nodeKey];
+      if (!node) return;
+      gameState.currentDialogue = {
+        key: nodeKey,
+        speaker: node.speaker,
+        lines: [...node.lines],
+        lineIndex: 0,
+        choices: node.choices || null,
+        onClose: node.onClose || null
+      };
+      gameState.activeChoiceIndex = 0;
+      AudioEngine.talk();
+    }
+
+    function advanceDialogue() {
+      const d = gameState.currentDialogue;
+      if (!d) return;
+
+      // If at choices prompt
+      if (d.lineIndex >= d.lines.length - 1 && d.choices) {
+        const choice = d.choices[gameState.activeChoiceIndex];
+        choice.action();
+        updateBars();
+        return;
+      }
+
+      if (d.lineIndex < d.lines.length - 1) {
+        d.lineIndex++;
+        AudioEngine.talk();
+      } else {
+        // End of dialogue
+        if (d.onClose) d.onClose();
+        gameState.currentDialogue = null;
+        updateBars();
+        AudioEngine.beep();
+      }
+    }
+
+    function checkInteraction() {
+      // Find nearest interactable entity within range
+      const reach = 16;
+      let target = null;
+      let minDist = 999;
+
+      entities.forEach(ent => {
+        const cx = ent.x + ent.w / 2;
+        const cy = ent.y + ent.h / 2;
+        const px = player.x + player.w / 2;
+        const py = player.y + player.h / 2;
+        const dist = Math.hypot(cx - px, cy - py);
+        if (dist < reach + 6 && dist < minDist) {
+          minDist = dist;
+          target = ent;
+        }
+      });
+
+      if (!target) return;
+
+      if (target.id === 'mali') {
+        if (!gameState.flags.talkedToMali) {
+          setDialogue('mali_intro');
+        } else {
+          setDialogue('mali_done');
+        }
+      } else if (target.id === 'chemist') {
+        if (!gameState.inventory.prescription) {
+          setDialogue('chemist_closed_no_rx');
+        } else if (!gameState.inventory.pickedUpMedicine) {
+          setDialogue('chemist_pickup');
+        } else {
+          setDialogue('chemist_already_done');
+        }
+      } else if (target.id === 'home') {
+        if (!gameState.inventory.prescription) {
+          setDialogue('home_door_needs_rx');
+        } else if (gameState.inventory.pickedUpMedicine) {
+          setDialogue('home_deliver_meds');
+        } else {
+          setDialogue({
+            speaker: 'SEREN',
+            lines: ['I have Dad\'s slip. Need to run to the pharmacy!']
+          });
+        }
+      } else if (target.id === 'board') {
+        setDialogue('notice_board');
+      }
+    }
+
+    /* ============================================================
+       5. INPUT ATTACHMENTS (KEYBOARD & TOUCH)
+       ============================================================ */
+    window.addEventListener('keydown', (e) => {
+      AudioEngine.init();
+      if (['ArrowUp', 'KeyW'].includes(e.code)) { keys.up = true; handleMenuNav(-1); }
+      if (['ArrowDown', 'KeyS'].includes(e.code)) { keys.down = true; handleMenuNav(1); }
+      if (['ArrowLeft', 'KeyA'].includes(e.code)) keys.left = true;
+      if (['ArrowRight', 'KeyD'].includes(e.code)) keys.right = true;
+      if (['KeyE', 'Space', 'Enter'].includes(e.code)) {
+        triggerActionA();
+      }
+      if (['Escape', 'KeyB'].includes(e.code)) {
+        triggerActionB();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (['ArrowUp', 'KeyW'].includes(e.code)) keys.up = false;
+      if (['ArrowDown', 'KeyS'].includes(e.code)) keys.down = false;
+      if (['ArrowLeft', 'KeyA'].includes(e.code)) keys.left = false;
+      if (['ArrowRight', 'KeyD'].includes(e.code)) keys.right = false;
+    });
+
+    function handleMenuNav(delta) {
+      if (gameState.currentDialogue && gameState.currentDialogue.choices) {
+        const len = gameState.currentDialogue.choices.length;
+        gameState.activeChoiceIndex = (gameState.activeChoiceIndex + delta + len) % len;
+        AudioEngine.beep();
+      }
+    }
+
+    function triggerActionA() {
+      AudioEngine.init();
+      if (gameState.currentDialogue) {
+        advanceDialogue();
+      } else {
+        checkInteraction();
+      }
+    }
+
+    function triggerActionB() {
+      if (gameState.currentDialogue && !gameState.currentDialogue.choices) {
+        gameState.currentDialogue = null;
+        AudioEngine.beep();
+      }
+    }
+
+    // Touch Button Wiring
+    const wireBtn = (id, onDown, onUp) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('pointerdown', (e) => { e.preventDefault(); AudioEngine.init(); onDown(); });
+      el.addEventListener('pointerup', (e) => { e.preventDefault(); if (onUp) onUp(); });
+      el.addEventListener('pointerleave', (e) => { e.preventDefault(); if (onUp) onUp(); });
+    };
+
+    wireBtn('btnUp', () => { keys.up = true; handleMenuNav(-1); }, () => keys.up = false);
+    wireBtn('btnDown', () => { keys.down = true; handleMenuNav(1); }, () => keys.down = false);
+    wireBtn('btnLeft', () => keys.left = true, () => keys.left = false);
+    wireBtn('btnRight', () => keys.right = true, () => keys.right = false);
+    wireBtn('btnA', () => triggerActionA());
+    wireBtn('btnB', () => triggerActionB());
+
+    /* ============================================================
+       6. COLLISION & LOGIC TICK
+       ============================================================ */
+    function checkCollision(nx, ny) {
+      for (const s of solids) {
+        if (nx < s.x + s.w && nx + player.w > s.x && ny < s.y + s.h && ny + player.h > s.y) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    let tick = 0;
+    function update() {
+      tick++;
+
+      // Pause player movement when reading dialogue or choices
+      if (gameState.currentDialogue) {
+        player.isMoving = false;
+        return;
+      }
+
+      let dx = 0;
+      let dy = 0;
+
+      if (keys.up) { dy -= player.speed; player.facing = 'up'; }
+      if (keys.down) { dy += player.speed; player.facing = 'down'; }
+      if (keys.left) { dx -= player.speed; player.facing = 'left'; }
+      if (keys.right) { dx += player.speed; player.facing = 'right'; }
+
+      if (dx !== 0 && dy !== 0) {
+        dx *= 0.707;
+        dy *= 0.707;
+      }
+
+      player.isMoving = (dx !== 0 || dy !== 0);
+      if (player.isMoving && tick % 6 === 0) {
+        player.animStep = (player.animStep + 1) % 4;
+      }
+
+      // Axis-separated movement check
+      if (dx !== 0 && !checkCollision(player.x + dx, player.y)) {
+        player.x += dx;
+      }
+      if (dy !== 0 && !checkCollision(player.x, player.y + dy)) {
+        player.y += dy;
+      }
+    }
+
+    /* ============================================================
+       7. GRAPHICAL RENDERING (CHUNKY PIXEL TILES & SPRITES)
+       ============================================================ */
+    function render() {
+      ctx.imageSmoothingEnabled = false;
+
+      // 1. Background Ground Tile (GB Light Dither)
+      ctx.fillStyle = GB.WHITE;
+      ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
+
+      // Cobblestone / path dither
+      ctx.fillStyle = GB.LIGHT;
+      for (let x = 0; x < SCREEN_W; x += 16) {
+        for (let y = 48; y < SCREEN_H; y += 16) {
+          ctx.fillRect(x + 2, y + 2, 4, 2);
+          ctx.fillRect(x + 10, y + 10, 4, 2);
+        }
+      }
+
+      // 2. Welsh Terraced Cottages & Pharmacy
+      drawBuilding(16, 12, 40, 32, 'HOME', true);
+      drawBuilding(108, 12, 40, 26, 'RX', false);
+
+      // Notice Board
+      ctx.fillStyle = GB.DARK;
+      ctx.fillRect(82, 36, 10, 8);
+      ctx.fillStyle = GB.BLACK;
+      ctx.strokeRect(82, 36, 10, 8);
+      ctx.fillRect(86, 44, 2, 4);
+
+      // 3. Sports Court (Where friends hang out)
+      ctx.strokeStyle = GB.DARK;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(92, 66, 60, 48);
+      // Court net
+      for (let y = 68; y < 114; y += 4) {
+        ctx.fillStyle = GB.DARK;
+        ctx.fillRect(122, y, 1, 2);
+      }
+      // Court Label
+      drawTinyText('REC PARK', 98, 72, GB.DARK);
+
+      // 4. Render NPC: Mali (Seren's Friend)
+      drawMali(104, 80);
+
+      // 5. Render Player: Seren
+      drawSeren(player.x, player.y, player.facing, player.animStep, player.isMoving);
+
+      // 6. Proximity Hint prompt "[A]"
+      drawInteractionPrompt();
+
+      // 7. Dialogue Box Overlay
+      if (gameState.currentDialogue) {
+        drawDialogueBox(gameState.currentDialogue);
+      }
+    }
+
+    // Building helper
+    function drawBuilding(x, y, w, h, label, hasDoor) {
+      // Pitched roof
+      ctx.fillStyle = GB.BLACK;
+      ctx.fillRect(x, y, w, 10);
+      ctx.fillStyle = GB.DARK;
+      for (let rx = x; rx < x + w; rx += 6) {
+        ctx.fillRect(rx, y + 2, 4, 3);
+      }
+
+      // Walls
+      ctx.fillStyle = GB.LIGHT;
+      ctx.fillRect(x, y + 10, w, h);
+      ctx.fillStyle = GB.BLACK;
+      ctx.strokeRect(x, y + 10, w, h);
+
+      // Door
+      if (hasDoor) {
+        ctx.fillStyle = GB.DARK;
+        ctx.fillRect(x + 14, y + h - 10, 10, 10);
+        ctx.fillStyle = GB.BLACK;
+        ctx.strokeRect(x + 14, y + h - 10, 10, 10);
+      }
+
+      // Windows
+      ctx.fillStyle = GB.WHITE;
+      ctx.fillRect(x + 4, y + 14, 8, 8);
+      ctx.strokeRect(x + 4, y + 14, 8, 8);
+      ctx.fillRect(x + w - 12, y + 14, 8, 8);
+      ctx.strokeRect(x + w - 12, y + 14, 8, 8);
+
+      // Small header tag
+      drawTinyText(label, x + 4, y + 4, GB.WHITE);
+    }
+
+    // Seren Character Sprite (GB Pocket proportions)
+    function drawSeren(x, y, facing, anim, moving) {
+      const bob = moving ? (anim % 2 === 0 ? 1 : 0) : 0;
+
+      // Shadow
+      ctx.fillStyle = GB.BLACK;
+      ctx.fillRect(x + 2, y + 10, 8, 2);
+
+      // Body (Raincoat in GB 4-color)
+      ctx.fillStyle = GB.LIGHT;
+      ctx.fillRect(x + 2, y + 4 + bob, 8, 6);
+      ctx.fillStyle = GB.BLACK;
+      ctx.strokeRect(x + 2, y + 4 + bob, 8, 6);
+
+      // Satchel strap
+      ctx.fillStyle = GB.DARK;
+      ctx.fillRect(x + 3, y + 5 + bob, 2, 5);
+
+      // Head
+      ctx.fillStyle = GB.WHITE;
+      ctx.fillRect(x + 3, y - 2 + bob, 6, 6);
+      ctx.fillStyle = GB.BLACK;
+      ctx.strokeRect(x + 3, y - 2 + bob, 6, 6);
+
+      // Auburn Hair / Cap
+      ctx.fillStyle = GB.DARK;
+      ctx.fillRect(x + 2, y - 3 + bob, 8, 3);
+      // Braid
+      ctx.fillRect(x + 1, y + 1 + bob, 2, 4);
+
+      // Eye
+      if (facing === 'right') {
+        ctx.fillStyle = GB.BLACK;
+        ctx.fillRect(x + 7, y + bob, 1, 2);
+      } else if (facing === 'left') {
+        ctx.fillStyle = GB.BLACK;
+        ctx.fillRect(x + 4, y + bob, 1, 2);
+      } else if (facing === 'down') {
+        ctx.fillStyle = GB.BLACK;
+        ctx.fillRect(x + 4, y + bob, 1, 2);
+        ctx.fillRect(x + 7, y + bob, 1, 2);
+      }
+
+      // Boots
+      ctx.fillStyle = GB.BLACK;
+      if (moving && anim % 2 === 1) {
+        ctx.fillRect(x + 2, y + 10, 3, 2);
+      } else {
+        ctx.fillRect(x + 2, y + 10, 3, 2);
+        ctx.fillRect(x + 7, y + 10, 3, 2);
+      }
+    }
+
+    // Mali (Friend holding ball)
+    function drawMali(x, y) {
+      // Shadow
+      ctx.fillStyle = GB.BLACK;
+      ctx.fillRect(x + 2, y + 10, 8, 2);
+
+      // Clothes
+      ctx.fillStyle = GB.DARK;
+      ctx.fillRect(x + 2, y + 4, 8, 6);
+      ctx.fillStyle = GB.BLACK;
+      ctx.strokeRect(x + 2, y + 4, 8, 6);
+
+      // Head
+      ctx.fillStyle = GB.WHITE;
+      ctx.fillRect(x + 3, y - 2, 6, 6);
+      ctx.strokeRect(x + 3, y - 2, 6, 6);
+
+      // Hair
+      ctx.fillStyle = GB.BLACK;
+      ctx.fillRect(x + 2, y - 3, 8, 3);
+
+      // Holding ball
+      ctx.fillStyle = GB.WHITE;
+      ctx.fillRect(x + 9, y + 4, 4, 4);
+      ctx.fillStyle = GB.BLACK;
+      ctx.strokeRect(x + 9, y + 4, 4, 4);
+    }
+
+    function drawInteractionPrompt() {
+      if (gameState.currentDialogue) return;
+
+      // Look if near any interactive entity
+      for (const ent of entities) {
+        const dist = Math.hypot(
+          (ent.x + ent.w / 2) - (player.x + player.w / 2),
+          (ent.y + ent.h / 2) - (player.y + player.h / 2)
+        );
+        if (dist < 20) {
+          // Floating [A] bubble
+          ctx.fillStyle = GB.WHITE;
+          ctx.fillRect(player.x + 3, player.y - 12, 10, 8);
+          ctx.fillStyle = GB.BLACK;
+          ctx.strokeRect(player.x + 3, player.y - 12, 10, 8);
+          drawTinyText('A', player.x + 6, player.y - 6, GB.BLACK);
+          break;
+        }
+      }
+    }
+
+    /* ============================================================
+       8. AUTHENTIC POKÉMON RED / GB DOUBLE-BORDER DIALOGUE BOX
+       ============================================================ */
+    function drawDialogueBox(d) {
+      const boxX = 6;
+      const boxY = 88;
+      const boxW = SCREEN_W - 12;
+      const boxH = 50;
+
+      // Box body
+      ctx.fillStyle = GB.WHITE;
+      ctx.fillRect(boxX, boxY, boxW, boxH);
+
+      // Double Game Boy border
+      ctx.strokeStyle = GB.BLACK;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(boxX, boxY, boxW, boxH);
+      ctx.lineWidth = 1;
+      ctx.strokeRect(boxX + 2, boxY + 2, boxW - 4, boxH - 4);
+
+      // Speaker Name Tag
+      if (d.speaker) {
+        ctx.fillStyle = GB.LIGHT;
+        ctx.fillRect(boxX + 6, boxY - 7, d.speaker.length * 5 + 8, 9);
+        ctx.fillStyle = GB.BLACK;
+        ctx.strokeRect(boxX + 6, boxY - 7, d.speaker.length * 5 + 8, 9);
+        drawTinyText(d.speaker, boxX + 9, boxY - 1, GB.BLACK);
+      }
+
+      // Text Lines
+      const currentLine = d.lines[d.lineIndex] || '';
+      drawWrappedText(currentLine, boxX + 8, boxY + 12, boxW - 16);
+
+      // If at choices step
+      if (d.lineIndex >= d.lines.length - 1 && d.choices) {
+        ctx.fillStyle = GB.WHITE;
+        ctx.fillRect(boxX + 10, boxY + 22, boxW - 20, 24);
+        ctx.fillStyle = GB.BLACK;
+        ctx.strokeRect(boxX + 10, boxY + 22, boxW - 20, 24);
+
+        d.choices.forEach((c, i) => {
+          const cy = boxY + 31 + i * 9;
+          const isSelected = (i === gameState.activeChoiceIndex);
+          if (isSelected) {
+            // Arrow indicator (►)
+            drawTinyText('>', boxX + 14, cy, GB.BLACK);
+          }
+          drawTinyText(c.text.substring(0, 20), boxX + 22, cy, GB.BLACK);
+        });
+      } else {
+        // Blinking Game Boy Down Arrow (▼)
+        if (Math.floor(tick / 15) % 2 === 0) {
+          ctx.fillStyle = GB.BLACK;
+          ctx.beginPath();
+          ctx.moveTo(boxX + boxW - 12, boxY + boxH - 8);
+          ctx.lineTo(boxX + boxW - 6, boxY + boxH - 8);
+          ctx.lineTo(boxX + boxW - 9, boxY + boxH - 4);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+    }
+
+    // Bitmap 4x5 font renderer for crisp Game Boy text
+    function drawTinyText(str, x, y, color) {
+      ctx.fillStyle = color;
+      ctx.font = '7px "Press Start 2P", monospace';
+      ctx.fillText(str, x, y);
+    }
+
+    function drawWrappedText(text, x, y, maxWidth) {
+      ctx.fillStyle = GB.BLACK;
+      ctx.font = '7px "Press Start 2P", monospace';
+      
+      const words = text.split(' ');
+      let line = '';
+      let lineY = y;
+
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && n > 0) {
+          ctx.fillText(line, x, lineY);
+          line = words[n] + ' ';
+          lineY += 9;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line, x, lineY);
+    }
+
+    /* ============================================================
+       9. MAIN LOOP
+       ============================================================ */
+    function gameLoop() {
+      update();
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Start
+    updateBars();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
