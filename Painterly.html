@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seren's Journey • Painterly 2D Indie Demo (Pharmacy Level)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #060b13;
+            color: #f1f5f9;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow-x: hidden;
+        }
+        .serif-title {
+            font-family: 'Playfair Display', Georgia, serif;
+        }
+        /* Custom scrollbar for inventory & dialogue */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #f59e0b;
+        }
+        /* Pulsing interaction marker */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.9); opacity: 0.9; }
+            50% { transform: scale(1.15); opacity: 0.4; }
+            100% { transform: scale(0.9); opacity: 0.9; }
+        }
+        .pulse-marker {
+            animation: pulse-ring 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-slate-950">
+
+    <header class="border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md px-4 sm:px-6 py-3 sticky top-0 z-30 flex flex-wrap items-center justify-between gap-3 shadow-md">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center font-bold text-base shadow-sm">
+                <i class="fa-solid fa-prescription-bottle-medical"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-sm sm:text-base font-bold text-white tracking-tight leading-none">Seren's Journey</h1>
+                    <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">Painterly 2D Indie</span>
+                </div>
+                <p class="text-xs text-slate-400">Level 1 Demo: The Pharmacy Prescription & Young Carer ID Verification</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+            <!-- Audio Toggle -->
+            <button id="toggleAudioBtn" class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700/80 hover:border-amber-500/50 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-2 transition-all shadow-sm">
+                <i id="audioIcon" class="fa-solid fa-volume-high text-amber-400"></i>
+                <span id="audioText">Atmosphere On</span>
+            </button>
+            <!-- Satchel Quick Access -->
+            <button id="openSatchelBtn" class="px-3.5 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/40 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold flex items-center gap-2 transition-all">
+                <i class="fa-solid fa-bag-shopping"></i>
+                <span>Satchel (<span id="satchelCount">2</span>)</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-6xl w-full mx-auto p-2 sm:p-4 md:p-6 flex flex-col gap-4">
+
+        <!-- Top Status & Objective Bar -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Current Task:</span>
+                </div>
+                <div id="objectiveBanner" class="text-xs sm:text-sm font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-xl">
+                    Collect Dad's chronic pain repeat medication from Evans Pharmacy
+                </div>
+            </div>
+
+            <!-- Anxiety & Composure Gauge -->
+            <div class="flex items-center gap-3 ml-auto">
+                <span class="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-heart-pulse text-rose-400"></i> Composure:
+                </span>
+                <div class="w-28 sm:w-36 bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                    <div id="composureBar" class="bg-gradient-to-r from-emerald-500 via-amber-400 to-emerald-400 h-2.5 rounded-full transition-all duration-500" style="width: 85%;"></div>
+                </div>
+                <span id="composureLabel" class="text-xs font-mono text-emerald-400">85%</span>
+            </div>
+        </div>
+
+        <!-- Canvas Container with Interactive Overlays -->
+        <div id="gameContainer" class="relative w-full aspect-[16/9] bg-slate-950 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col select-none">
+            <!-- 2D Canvas Layer -->
+            <canvas id="gameCanvas" class="w-full h-full block absolute inset-0 z-0"></canvas>
+
+            <!-- Floating In-World Interaction Indicator -->
+            <div id="interactionHint" class="absolute pointer-events-none z-10 hidden transform -translate-x-1/2 -translate-y-full transition-all duration-200">
+                <div class="bg-slate-950/90 border border-amber-500/60 text-amber-300 px-3 py-1.5 rounded-xl shadow-xl backdrop-blur-md flex items-center gap-2 text-xs font-bold pulse-marker">
+                    <span class="px-1.5 py-0.5 bg-amber-500 text-slate-950 rounded text-[10px] uppercase font-extrabold">E</span>
+                    <span id="hintText">Talk / Inspect</span>
+                </div>
+            </div>
+
+            <!-- Location Badge (High Street vs Inside Pharmacy) -->
+            <div class="absolute top-4 left-4 z-10 pointer-events-none">
+                <div class="bg-slate-950/80 border border-slate-800/80 backdrop-blur-md px-3.5 py-1.5 rounded-2xl flex items-center gap-2 shadow-lg">
+                    <i id="locationIcon" class="fa-solid fa-cloud-showers-heavy text-amber-400 text-xs"></i>
+                    <span id="locationTitle" class="text-xs font-bold text-white tracking-wide">High Street • Rhondda Valley</span>
+                </div>
+            </div>
+
+            <!-- In-Game Dialogue Box -->
+            <div id="dialogueBox" class="absolute inset-x-3 sm:inset-x-6 bottom-3 sm:bottom-6 z-20 hidden transition-all duration-300">
+                <div class="bg-slate-950/95 border-2 border-amber-500/70 rounded-2xl p-4 sm:p-5 shadow-2xl backdrop-blur-xl flex flex-col gap-3">
+                    <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                        <div class="flex items-center gap-2.5">
+                            <span id="dialogueSpeakerBadge" class="w-3 h-3 rounded-full bg-amber-400"></span>
+                            <span id="dialogueSpeaker" class="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-amber-400">Seren</span>
+                        </div>
+                        <button id="closeDialogueBtn" class="text-slate-500 hover:text-white text-xs px-2 py-1 rounded-lg hover:bg-slate-800 transition">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <p id="dialogueContent" class="text-sm sm:text-base text-slate-100 leading-relaxed font-normal">
+                        <!-- Dialogue injected -->
+                    </p>
+
+                    <!-- Branching Response Choices -->
+                    <div id="dialogueChoices" class="flex flex-col sm:flex-row gap-2 mt-1 pt-1">
+                        <!-- Choices injected dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Young Carer ID Card Inspection Modal / Challenge Overlay -->
+            <div id="idCardModal" class="absolute inset-0 z-30 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-4">
+                <div class="bg-slate-900 border border-amber-500/40 rounded-3xl max-w-lg w-full p-6 shadow-2xl flex flex-col gap-4 relative animate-fade-in">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <span class="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold">Ceredigion & Rhondda Valley Authority • NHS Cymru Recognized</span>
+                            <h3 class="text-xl font-bold text-white serif-title mt-0.5">Young Carer ID & Authorization Card</h3>
+                        </div>
+                        <button id="closeIdModalBtn" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center text-sm transition">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <!-- Visual ID Card Container (Realistic Welsh Young Carers Card Layout) -->
+                    <div class="bg-gradient-to-br from-amber-600/30 via-slate-800/90 to-teal-900/40 border-2 border-amber-400/80 rounded-2xl p-4 sm:p-5 relative shadow-inner">
+                        <div class="flex items-center justify-between mb-3 border-b border-amber-400/30 pb-2">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-shield-heart text-amber-400 text-lg"></i>
+                                <span class="text-xs font-extrabold uppercase tracking-wider text-amber-200">Official Young Carer Verification</span>
+                            </div>
+                            <span class="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-400/40">ID: YC-WAL-2026-881</span>
+                        </div>
+
+                        <div class="grid grid-cols-12 gap-3 items-center">
+                            <!-- Portrait Photo Frame -->
+                            <div class="col-span-4 flex flex-col items-center">
+                                <div class="w-20 h-24 rounded-xl bg-amber-950/80 border-2 border-amber-400/60 overflow-hidden relative shadow-md flex items-center justify-center">
+                                    <!-- Stylized mini canvas avatar -->
+                                    <canvas id="idCardAvatarCanvas" width="80" height="96" class="w-full h-full"></canvas>
+                                </div>
+                                <span class="text-[9px] text-slate-400 mt-1 uppercase font-mono tracking-tighter">Seren Hughes (15)</span>
+                            </div>
+
+                            <!-- Details Column -->
+                            <div class="col-span-8 space-y-1.5 text-xs">
+                                <div>
+                                    <span class="text-[10px] text-slate-400 uppercase font-semibold block">Primary Registered Carer For:</span>
+                                    <span class="text-slate-100 font-bold">David Hughes (Father)</span>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-slate-400 uppercase font-semibold block">Prescription Collection Authorization:</span>
+                                    <span class="text-emerald-300 font-semibold flex items-center gap-1">
+                                        <i class="fa-solid fa-circle-check text-xs"></i> GP Verified & Emergency Contact Registered
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-slate-400 uppercase font-semibold block">Recognized under Welsh Social Services & Well-being Act</span>
+                                    <span class="text-[11px] text-amber-200/90 italic">"Entitled to collect prescribed supplies on behalf of cared for."</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card Watermark Seal -->
+                        <div class="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                            <span>Carers Trust Cymru Partner Verified</span>
+                            <span class="text-amber-400 font-bold">EXP: 08/2027</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Prompt for the Pharmacy Challenge -->
+                    <div class="flex items-center justify-between gap-3 pt-2">
+                        <p class="text-xs text-slate-300">
+                            Presenting this card explains Seren's role without having to justify her age or feel embarrassed.
+                        </p>
+                        <button id="presentIdCardBtn" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-lg transition-all flex items-center gap-2 whitespace-nowrap">
+                            <i class="fa-solid fa-id-card"></i> Present ID to Pharmacist
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Satchel Inventory Drawer Overlay -->
+            <div id="satchelModal" class="absolute inset-0 z-30 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+                <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-5 shadow-2xl flex flex-col gap-3">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-bag-shopping text-amber-400"></i>
+                            <h3 class="text-base font-bold text-white">Seren's School Satchel</h3>
+                        </div>
+                        <button id="closeSatchelModalBtn" class="text-slate-400 hover:text-white text-sm">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div id="satchelItemsList" class="grid grid-cols-1 gap-2 max-h-72 overflow-y-auto">
+                        <!-- Items rendered by script -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mission Success Banner Overlay -->
+            <div id="successOverlay" class="absolute inset-0 z-40 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-6">
+                <div class="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-emerald-500/80 rounded-3xl max-w-lg w-full p-6 sm:p-8 text-center shadow-2xl flex flex-col items-center gap-4">
+                    <div class="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 flex items-center justify-center text-2xl shadow-lg">
+                        <i class="fa-solid fa-hand-holding-heart"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-bold uppercase tracking-widest text-emerald-400">Challenge Completed!</span>
+                        <h2 class="text-2xl font-bold text-white serif-title mt-1">Prescription Collected with Dignity</h2>
+                    </div>
+                    <p class="text-sm text-slate-300 leading-relaxed text-left bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+                        In many pharmacies across Wales, young carers have reported being turned away, quizzed in front of other shoppers, or told "an adult has to collect this." Having a recognized <strong>Young Carers ID Card</strong> gives young people the validation and agency they deserve.
+                    </p>
+                    <div class="flex flex-wrap items-center justify-center gap-3 w-full">
+                        <button id="replayBtn" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition">
+                            <i class="fa-solid fa-arrow-rotate-left"></i> Walk Level Again
+                        </button>
+                        <button id="dismissSuccessBtn" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-2 transition shadow-md">
+                            <i class="fa-solid fa-check"></i> Continue Exploring
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+            <!-- Keyboard Navigation Instructions -->
+            <div class="md:col-span-7 bg-slate-900/60 border border-slate-800/80 rounded-2xl px-4 py-2.5 flex items-center justify-between text-xs text-slate-400">
+                <div class="flex items-center gap-4">
+                    <span class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[11px]">A</kbd> <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[11px]">D</kbd> or <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[11px]">←</kbd> <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[11px]">→</kbd> Move</span>
+                    <span class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[11px]">E</kbd> / <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[11px]">Space</kbd> Interact</span>
+                    <span class="flex items-center gap-1.5"><kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[11px]">I</kbd> Satchel</span>
+                </div>
+                <div class="hidden sm:flex items-center gap-1 text-[11px] text-amber-400/90 font-medium">
+                    <i class="fa-solid fa-paintbrush"></i> Procedural Painterly Shading
+                </div>
+            </div>
+
+            <!-- Touch / Mobile Movement Controls -->
+            <div class="md:col-span-5 flex items-center justify-end gap-2">
+                <button id="touchLeftBtn" class="flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 active:bg-amber-500/20 border border-slate-700 active:border-amber-500 text-slate-200 text-sm font-bold flex items-center justify-center gap-1.5 transition">
+                    <i class="fa-solid fa-arrow-left"></i> Left
+                </button>
+                <button id="touchInteractBtn" class="flex-1 sm:flex-none px-6 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-extrabold text-sm shadow-md flex items-center justify-center gap-1.5 transition">
+                    <i class="fa-solid fa-hand"></i> Interact
+                </button>
+                <button id="touchRightBtn" class="flex-1 sm:flex-none px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 active:bg-amber-500/20 border border-slate-700 active:border-amber-500 text-slate-200 text-sm font-bold flex items-center justify-center gap-1.5 transition">
+                    Right <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        /* -------------------------------------------------------------
+           1. SOUND SYNTHESIS ENGINE (WEB AUDIO API)
+           Generates gentle Welsh rain, footsteps, cozy chords & chimes
+        ------------------------------------------------------------- */
+        class IndieAudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.isMuted = false;
+                this.rainGain = null;
+                this.isInitialized = false;
+            }
+
+            init() {
+                if (this.isInitialized) return;
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                    this.startAtmosphericRain();
+                    this.isInitialized = true;
+                } catch(e) {
+                    console.log("AudioContext blocked or unsupported", e);
+                }
+            }
+
+            startAtmosphericRain() {
+                if (!this.ctx || this.rainGain) return;
+                // Pink noise generator for gentle Welsh drizzle
+                const bufferSize = this.ctx.sampleRate * 2;
+                const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    b0 = 0.99886 * b0 + white * 0.0555179;
+                    b1 = 0.99332 * b1 + white * 0.0750759;
+                    b2 = 0.96900 * b2 + white * 0.1538520;
+                    b3 = 0.86650 * b3 + white * 0.3104856;
+                    b4 = 0.55000 * b4 + white * 0.5329522;
+                    b5 = -0.7616 * b5 - white * 0.0168980;
+                    output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.04;
+                    b6 = white * 0.115926;
+                }
+                const whiteNoise = this.ctx.createBufferSource();
+                whiteNoise.buffer = noiseBuffer;
+                whiteNoise.loop = true;
+
+                // Lowpass filter for cozy outdoor/indoor damping
+                this.rainFilter = this.ctx.createBiquadFilter();
+                this.rainFilter.type = 'lowpass';
+                this.rainFilter.frequency.value = 850;
+
+                this.rainGain = this.ctx.createGain();
+                this.rainGain.gain.value = this.isMuted ? 0 : 0.18;
+
+                whiteNoise.connect(this.rainFilter);
+                this.rainFilter.connect(this.rainGain);
+                this.rainGain.connect(this.ctx.destination);
+                whiteNoise.start();
+            }
+
+            setIndoorMuffle(isIndoor) {
+                if (!this.rainFilter || !this.ctx) return;
+                const targetFreq = isIndoor ? 320 : 950;
+                const targetVol = isIndoor ? 0.08 : 0.22;
+                this.rainFilter.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.4);
+                if (!this.isMuted && this.rainGain) {
+                    this.rainGain.gain.setTargetAtTime(targetVol, this.ctx.currentTime, 0.4);
+                }
+            }
+
+            playFootstep() {
+                if (!this.ctx || this.isMuted) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(140 + Math.random() * 40, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playDoorBell() {
+                if (!this.ctx || this.isMuted) return;
+                [659.25, 523.25].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.18);
+                    gain.gain.setValueAtTime(0, this.ctx.currentTime + idx * 0.18);
+                    gain.gain.linearRampToValueAtTime(0.12, this.ctx.currentTime + idx * 0.18 + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.18 + 0.8);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.18);
+                    osc.stop(this.ctx.currentTime + idx * 0.18 + 0.85);
+                });
+            }
+
+            playCardChime() {
+                if (!this.ctx || this.isMuted) return;
+                [440, 554.37, 659.25, 880].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.09);
+                    gain.gain.setValueAtTime(0, this.ctx.currentTime + idx * 0.09);
+                    gain.gain.linearRampToValueAtTime(0.15, this.ctx.currentTime + idx * 0.09 + 0.03);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.09 + 1.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.09);
+                    osc.stop(this.ctx.currentTime + idx * 0.09 + 1.25);
+                });
+            }
+
+            playBlip() {
+                if (!this.ctx || this.isMuted) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(320 + Math.random() * 80, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.03, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+
+            toggleMute() {
+                this.isMuted = !this.isMuted;
+                if (this.rainGain && this.ctx) {
+                    this.rainGain.gain.setValueAtTime(this.isMuted ? 0 : 0.15, this.ctx.currentTime);
+                }
+                return this.isMuted;
+            }
+        }
+
+        const audio = new IndieAudioEngine();
+
+        /* -------------------------------------------------------------
+           2. ADAPTIVE STATE SCHEMA & NARRATIVE DATA
+        ------------------------------------------------------------- */
+        const gameState = {
+            scene: 'street', // 'street' | 'pharmacy_interior'
+            player: {
+                x: 120,
+                y: 0,
+                targetX: 120,
+                speed: 3.5,
+                direction: 1, // 1: right, -1: left
+                isMoving: false,
+                footstepTimer: 0,
+                bobTimer: 0
+            },
+            stats: {
+                composure: 85,
+                prescriptionsFilled: false,
+                pharmacistDialogueStep: 0,
+                hasPresentedIdCard: false,
+                viewedPrescriptionSlip: false
+            },
+            inventory: [
+                {
+                    id: 'slip',
+                    name: "Dad's Repeat Prescription",
+                    tag: 'Medical Note',
+                    icon: 'fa-prescription',
+                    description: "Authorized repeat order for David Hughes (Pain relief & mobility medication). Signed by GP Dr. Jenkins."
+                },
+                {
+                    id: 'id_card',
+                    name: "Official Young Carer ID Card",
+                    tag: 'Verification',
+                    icon: 'fa-id-card',
+                    description: "Approved by local authority & Carers Trust Cymru. Proves Seren is legally authorized to collect medication for her father."
+                }
+            ],
+            interactiveObjects: {
+                street: [
+                    {
+                        id: 'bus_stop',
+                        x: 80,
+                        width: 70,
+                        title: "Valley Bus Timetable",
+                        actionPrompt: "Inspect Schedule",
+                        onInteract: () => showDialogue("Seren", "The next bus back up the valley is at 17:15. I need to be quick inside the chemist so Dad isn't left waiting without his afternoon tea and medicine.")
+                    },
+                    {
+                        id: 'pharmacy_door',
+                        x: 580,
+                        width: 80,
+                        title: "A. Evans Chemist & Pharmacist",
+                        actionPrompt: "Enter Pharmacy",
+                        onInteract: () => enterPharmacy()
+                    },
+                    {
+                        id: 'puddle',
+                        x: 320,
+                        width: 60,
+                        title: "Rain Puddle",
+                        actionPrompt: "Look at Reflection",
+                        onInteract: () => showDialogue("Seren", "I've still got my school satchel on. People in shops sometimes look at me like I'm skipping class or too young to handle serious errands.")
+                    }
+                ],
+                pharmacy_interior: [
+                    {
+                        id: 'exit_door',
+                        x: 90,
+                        width: 60,
+                        title: "High Street Exit",
+                        actionPrompt: "Leave to Street",
+                        onInteract: () => exitToStreet()
+                    },
+                    {
+                        id: 'noticeboard',
+                        x: 280,
+                        width: 70,
+                        title: "Community Health Board",
+                        actionPrompt: "Read Posters",
+                        onInteract: () => showDialogue("Pharmacy Poster", "'Are you caring for a family member at home? Ask your pharmacist about the Young Carer In-Store Recognition Scheme.' It feels good seeing that poster here.")
+                    },
+                    {
+                        id: 'chemist_counter',
+                        x: 620,
+                        width: 100,
+                        title: "Dispensing Counter",
+                        actionPrompt: "Speak with Mr. Evans",
+                        onInteract: () => triggerPharmacistEncounter()
+                    }
+                ]
+            }
+        };
+
+        /* -------------------------------------------------------------
+           3. CANVAS SETUP & PROCEDURAL DRAWING ENGINE
+        ------------------------------------------------------------- */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let animTick = 0;
+        let activeInteractable = null;
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function drawStreetExterior(w, h, t) {
+            const groundY = h * 0.78;
+
+            // 1. Dawn / Overcast Valley Sky
+            const sky = ctx.createLinearGradient(0, 0, 0, groundY);
+            sky.addColorStop(0, '#0c1626');
+            sky.addColorStop(0.4, '#1e2c3d');
+            sky.addColorStop(0.8, '#243431');
+            sky.addColorStop(1, '#182721');
+            ctx.fillStyle = sky;
+            ctx.fillRect(0, 0, w, h);
+
+            // 2. Distant Soft Welsh Mountain Ridge (Painterly Curves)
+            ctx.fillStyle = '#111f27';
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            for (let x = 0; x <= w + 40; x += 30) {
+                const my = groundY - 180 + Math.sin(x * 0.006) * 45 + Math.cos(x * 0.012) * 20;
+                ctx.lineTo(x, my);
+            }
+            ctx.lineTo(w, groundY);
+            ctx.closePath();
+            ctx.fill();
+
+            // 3. Middle Valley Hill with Terrace Silhouette
+            const hill = ctx.createLinearGradient(0, groundY - 120, 0, groundY);
+            hill.addColorStop(0, '#132822');
+            hill.addColorStop(1, '#0b1915');
+            ctx.fillStyle = hill;
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            for (let x = 0; x <= w + 30; x += 25) {
+                const hy = groundY - 110 + Math.sin(x * 0.008) * 30 + Math.cos(x * 0.015) * 15;
+                ctx.lineTo(x, hy);
+            }
+            ctx.lineTo(w, groundY);
+            ctx.closePath();
+            ctx.fill();
+
+            // 4. Welsh Terraced High Street Buildings
+            const shopX = w * 0.58;
+            // Left residential terrace
+            ctx.fillStyle = '#172228';
+            ctx.fillRect(0, groundY - 150, shopX - 100, 150);
+            // Left slate roof
+            ctx.fillStyle = '#0f171c';
+            ctx.beginPath();
+            ctx.moveTo(-10, groundY - 150);
+            ctx.lineTo((shopX - 100) * 0.5, groundY - 185);
+            ctx.lineTo(shopX - 100, groundY - 150);
+            ctx.closePath();
+            ctx.fill();
+
+            // Warm residential windows with light
+            ctx.fillStyle = 'rgba(251, 191, 36, 0.75)';
+            ctx.fillRect(shopX - 220, groundY - 120, 28, 38);
+            ctx.fillRect(shopX - 160, groundY - 120, 28, 38);
+            ctx.strokeStyle = '#0f171c';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(shopX - 220, groundY - 120, 28, 38);
+            ctx.strokeRect(shopX - 160, groundY - 120, 28, 38);
+
+            // 5. The Pharmacy (Evans Chemist) Building Front
+            const chemW = 260;
+            const chemH = 175;
+            const chemY = groundY - chemH;
+            ctx.fillStyle = '#1b2c2f'; // Victorian green-slate storefront
+            ctx.fillRect(shopX - 60, chemY, chemW, chemH);
+
+            // Chemist Fascia Board & Golden Hand-Lettered Sign
+            ctx.fillStyle = '#0f1c1f';
+            ctx.fillRect(shopX - 65, chemY - 32, chemW + 10, 36);
+            ctx.strokeStyle = '#d97706';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(shopX - 62, chemY - 30, chemW + 4, 32);
+
+            ctx.fillStyle = '#fde68a';
+            ctx.font = 'bold 13px "Playfair Display", Georgia, serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('A. EVANS • PHARMACIST & APOTHECARY', shopX + 70, chemY - 12);
+            ctx.font = 'bold 9px "Plus Jakarta Sans", sans-serif';
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillText('EST. 1952 • NHS PRESCRIPTIONS DISPENSED', shopX + 70, chemY + 2);
+            ctx.textAlign = 'left';
+
+            // Large Warm Bay Shop Windows (Bottles & Mortar in display)
+            const winW = 90;
+            const winH = 85;
+            ctx.fillStyle = 'rgba(251, 191, 36, 0.85)';
+            ctx.fillRect(shopX - 45, groundY - 115, winW, winH);
+            ctx.fillRect(shopX + 95, groundY - 115, winW, winH);
+
+            // Window Apothecary Bottles inside glow
+            ctx.fillStyle = '#047857';
+            ctx.fillRect(shopX - 25, groundY - 60, 16, 26);
+            ctx.fillStyle = '#b45309';
+            ctx.fillRect(shopX - 5, groundY - 65, 14, 31);
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(shopX + 115, groundY - 62, 16, 28);
+            ctx.fillStyle = '#b91c1c';
+            ctx.fillRect(shopX + 138, groundY - 68, 14, 34);
+
+            // Window Mullions (Dark Frames)
+            ctx.strokeStyle = '#091316';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(shopX - 45, groundY - 115, winW, winH);
+            ctx.strokeRect(shopX + 95, groundY - 115, winW, winH);
+            ctx.beginPath();
+            ctx.moveTo(shopX, groundY - 115); ctx.lineTo(shopX, groundY - 30);
+            ctx.moveTo(shopX + 140, groundY - 115); ctx.lineTo(shopX + 140, groundY - 30);
+            ctx.stroke();
+
+            // Entrance Door in middle
+            ctx.fillStyle = '#0d171a';
+            ctx.fillRect(shopX + 50, groundY - 120, 42, 120);
+            ctx.fillStyle = 'rgba(251, 191, 36, 0.7)';
+            ctx.fillRect(shopX + 56, groundY - 110, 30, 45); // Upper glass door pane
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath();
+            ctx.arc(shopX + 57, groundY - 48, 2.5, 0, Math.PI * 2); // Brass handle
+            ctx.fill();
+
+            // Warm Ambient Window Glow Spilling onto Street
+            const shopGlow = ctx.createRadialGradient(shopX + 70, groundY - 60, 20, shopX + 70, groundY, 180);
+            shopGlow.addColorStop(0, 'rgba(251, 191, 36, 0.3)');
+            shopGlow.addColorStop(0.6, 'rgba(245, 158, 11, 0.08)');
+            shopGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = shopGlow;
+            ctx.fillRect(shopX - 100, groundY - 120, chemW + 80, 160);
+
+            // 6. Bus Stop Shelter on Left
+            const busX = 75;
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(busX - 25, groundY - 110, 60, 110);
+            ctx.fillStyle = 'rgba(148, 163, 184, 0.15)';
+            ctx.fillRect(busX - 25, groundY - 110, 60, 110);
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(busX + 5, groundY - 122, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.fillText('BUS', busX - 4, groundY - 118);
+
+            // 7. Wet High Street Pavement & Puddles
+            const streetGrad = ctx.createLinearGradient(0, groundY, 0, h);
+            streetGrad.addColorStop(0, '#0c1218');
+            streetGrad.addColorStop(0.3, '#070c10');
+            streetGrad.addColorStop(1, '#030508');
+            ctx.fillStyle = streetGrad;
+            ctx.fillRect(0, groundY, w, h - groundY);
+
+            // Curb stones
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, groundY, w, 6);
+
+            // Shimmering Golden Puddle Reflection outside Pharmacy
+            ctx.fillStyle = 'rgba(251, 191, 36, 0.18)';
+            ctx.beginPath();
+            ctx.ellipse(shopX + 70, groundY + 18, 90, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Puddle near bus stop
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+            ctx.beginPath();
+            ctx.ellipse(320, groundY + 22, 45, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Welsh Rain Strands (Painterly Slanted Drizzle)
+            ctx.strokeStyle = 'rgba(226, 232, 240, 0.28)';
+            ctx.lineWidth = 1.3;
+            for (let r = 0; r < 30; r++) {
+                const rx = (r * 45 + t * 4) % w;
+                const ry = (r * 28 + t * 10) % h;
+                ctx.beginPath();
+                ctx.moveTo(rx, ry);
+                ctx.lineTo(rx - 3.5, ry + 16);
+                ctx.stroke();
+            }
+        }
+
+        function drawPharmacyInterior(w, h, t) {
+            const groundY = h * 0.78;
+
+            // 1. Warm Antique Chemist Wallpaper & Wood Panel Walls
+            const wall = ctx.createLinearGradient(0, 0, 0, groundY);
+            wall.addColorStop(0, '#1c1511');
+            wall.addColorStop(0.5, '#281c15');
+            wall.addColorStop(1, '#1b120c');
+            ctx.fillStyle = wall;
+            ctx.fillRect(0, 0, w, h);
+
+            // Ceiling & Wooden Crown Molding
+            ctx.fillStyle = '#110b07';
+            ctx.fillRect(0, 0, w, 28);
+            ctx.fillStyle = '#1f130c';
+            ctx.fillRect(0, 24, w, 6);
+
+            // 2. Rain-Streaked High Street Window (Left side)
+            const winX = 60;
+            ctx.fillStyle = '#0a1017';
+            ctx.fillRect(winX, groundY - 145, 80, 95);
+            ctx.strokeStyle = '#27170e';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(winX, groundY - 145, 80, 95);
+            // Rain on pane
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.lineWidth = 1.2;
+            for (let d = 0; d < 5; d++) {
+                const dy = groundY - 140 + ((t * 1.1 + d * 22) % 80);
+                ctx.beginPath();
+                ctx.moveTo(winX + 12 + d * 14, dy);
+                ctx.lineTo(winX + 10 + d * 14, dy + 10);
+                ctx.stroke();
+            }
+
+            // 3. Shelves of Prescription Bottles & Remedies (Apothecary Drawers)
+            const shelfX = 180;
+            const shelfW = w * 0.65;
+            for (let s = 0; s < 3; s++) {
+                const sy = groundY - 140 + s * 34;
+                ctx.fillStyle = '#3a2012';
+                ctx.fillRect(shelfX, sy, shelfW, 8);
+                // Glass medicine jars on shelves
+                for (let j = 0; j < 14; j++) {
+                    const jx = shelfX + 15 + j * (shelfW / 14);
+                    const jarColor = ['#38bdf8', '#fbbf24', '#34d399', '#cbd5e1', '#f87171'][j % 5];
+                    ctx.fillStyle = jarColor;
+                    ctx.fillRect(jx, sy - 20, 10, 20);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.fillRect(jx + 2, sy - 14, 6, 8); // White label
+                }
+            }
+
+            // Noticeboard / Health Advisory Poster
+            const postX = 265;
+            ctx.fillStyle = '#fed7aa';
+            ctx.fillRect(postX, groundY - 150, 48, 38);
+            ctx.strokeStyle = '#78350f';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(postX, groundY - 150, 48, 38);
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(postX + 4, groundY - 146, 40, 6);
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(postX + 6, groundY - 135, 36, 2);
+            ctx.fillRect(postX + 6, groundY - 128, 30, 2);
+
+            // 4. Parquet / Polished Oak Pharmacy Floorboards
+            const floor = ctx.createLinearGradient(0, groundY, 0, h);
+            floor.addColorStop(0, '#381e0f');
+            floor.addColorStop(0.3, '#291409');
+            floor.addColorStop(1, '#170a04');
+            ctx.fillStyle = floor;
+            ctx.fillRect(0, groundY, w, h - groundY);
+
+            // Floorboard horizontal planks
+            ctx.strokeStyle = '#1d0c04';
+            ctx.lineWidth = 1.5;
+            for (let fy = groundY; fy < h; fy += 16) {
+                ctx.beginPath();
+                ctx.moveTo(0, fy);
+                ctx.lineTo(w, fy);
+                ctx.stroke();
+            }
+
+            // 5. Solid Mahogany Dispensing Counter (Right side)
+            const cntX = w * 0.62;
+            const cntW = w * 0.35;
+            const cntH = 75;
+            const cntY = groundY - cntH;
+
+            // Counter body
+            ctx.fillStyle = '#451e11';
+            ctx.fillRect(cntX, cntY, cntW, cntH);
+            // Brass front inlay
+            ctx.strokeStyle = '#d97706';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(cntX + 12, cntY + 12, cntW - 24, cntH - 24);
+
+            // Counter top surface
+            ctx.fillStyle = '#5c2917';
+            ctx.fillRect(cntX - 10, cntY - 8, cntW + 10, 10);
+            ctx.fillStyle = 'rgba(251, 191, 36, 0.25)'; // Countertop light sheen
+            ctx.fillRect(cntX - 10, cntY - 8, cntW + 10, 2);
+
+            // Brass Till & Glass Prescription Dispense Bell
+            ctx.fillStyle = '#b45309';
+            ctx.fillRect(cntX + 40, cntY - 32, 28, 24);
+            ctx.fillStyle = '#fde68a';
+            ctx.beginPath();
+            ctx.arc(cntX + 85, cntY - 14, 6, Math.PI, Math.PI * 2);
+            ctx.fill();
+
+            // Ready Prescription Paper Bag on Counter (Appears when completed)
+            if (gameState.stats.prescriptionsFilled) {
+                ctx.fillStyle = '#d97706';
+                ctx.fillRect(cntX + 18, cntY - 26, 22, 26);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(cntX + 22, cntY - 20, 14, 10); // Pharmacy Label
+                ctx.fillStyle = '#0284c7';
+                ctx.fillRect(cntX + 25, cntY - 18, 8, 2);
+            }
+
+            // 6. Pharmacist NPC (Mr. Evans) standing behind counter
+            const pharmX = cntX + 90;
+            const bobP = Math.sin(t * 0.04) * 1.5;
+
+            // Pharmacist White Lab Coat & Shirt
+            ctx.fillStyle = '#f8fafc';
+            ctx.beginPath();
+            ctx.roundRect(pharmX - 18, cntY - 70 - bobP, 36, 75, [8, 8, 0, 0]);
+            ctx.fill();
+            // Blue tie
+            ctx.fillStyle = '#0284c7';
+            ctx.beginPath();
+            ctx.moveTo(pharmX, cntY - 62 - bobP);
+            ctx.lineTo(pharmX - 3, cntY - 40 - bobP);
+            ctx.lineTo(pharmX + 3, cntY - 40 - bobP);
+            ctx.fill();
+
+            // Stethoscope in pocket
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(pharmX - 8, cntY - 48 - bobP, 5, 0, Math.PI);
+            ctx.stroke();
+
+            // Head & Glasses
+            ctx.fillStyle = '#fed7aa';
+            ctx.beginPath();
+            ctx.arc(pharmX, cntY - 84 - bobP, 13, 0, Math.PI * 2);
+            ctx.fill();
+            // Silver hair
+            ctx.fillStyle = '#94a3b8';
+            ctx.beginPath();
+            ctx.arc(pharmX, cntY - 90 - bobP, 14, Math.PI * 0.8, Math.PI * 2.2);
+            ctx.fill();
+            // Wire glasses
+            ctx.strokeStyle = '#d97706';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(pharmX - 9, cntY - 88 - bobP, 7, 5);
+            ctx.strokeRect(pharmX + 2, cntY - 88 - bobP, 7, 5);
+            ctx.beginPath();
+            ctx.moveTo(pharmX - 2, cntY - 86 - bobP); ctx.lineTo(pharmX + 2, cntY - 86 - bobP);
+            ctx.stroke();
+
+            // 7. Volumetric Amber Pharmacy Light Glow
+            const lampGlow = ctx.createRadialGradient(cntX + 40, cntY - 60, 20, cntX + 40, cntY - 60, 240);
+            lampGlow.addColorStop(0, 'rgba(251, 191, 36, 0.32)');
+            lampGlow.addColorStop(0.6, 'rgba(245, 158, 11, 0.08)');
+            lampGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = lampGlow;
+            ctx.fillRect(0, 0, w, h);
+        }
+
+        function drawSeren(x, groundY, bob, dir) {
+            ctx.save();
+            ctx.translate(x, groundY);
+            if (dir < 0) ctx.scale(-1, 1);
+
+            // Ground Contact Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+            ctx.beginPath();
+            ctx.ellipse(0, 2, 22, 5.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Sturdy Boots
+            ctx.fillStyle = '#3f1d0b';
+            ctx.beginPath();
+            ctx.roundRect(-9, -5, 9, 5, 2);
+            ctx.roundRect(2, -5, 9, 5, 2);
+            ctx.fill();
+
+            // Legs & School Trousers
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(-4, -22 - bob);
+            ctx.lineTo(-4, -4);
+            ctx.moveTo(4, -22 - bob);
+            ctx.lineTo(4, -4);
+            ctx.stroke();
+
+            // Fisherman Yellow Raincoat (Painterly shaded with highlights)
+            const coatGrad = ctx.createLinearGradient(-15, -55 - bob, 15, -20 - bob);
+            coatGrad.addColorStop(0, '#fbbf24');
+            coatGrad.addColorStop(0.7, '#f59e0b');
+            coatGrad.addColorStop(1, '#d97706');
+            ctx.fillStyle = coatGrad;
+            ctx.beginPath();
+            ctx.roundRect(-15, -55 - bob, 30, 35, [9, 9, 4, 4]);
+            ctx.fill();
+
+            // Coat Front Zipper Line
+            ctx.strokeStyle = '#b45309';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, -55 - bob);
+            ctx.lineTo(0, -20 - bob);
+            ctx.stroke();
+
+            // Warm Navy Knit Collar
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.roundRect(-7, -60 - bob, 14, 6, 2);
+            ctx.fill();
+
+            // School Satchel (Slung across chest)
+            ctx.fillStyle = '#78350f';
+            ctx.beginPath();
+            ctx.roundRect(-20, -50 - bob, 8, 20, 3);
+            ctx.fill();
+            // Brass Buckle
+            ctx.fillStyle = '#fde68a';
+            ctx.fillRect(-21, -42 - bob, 3, 4);
+
+            // Sleeves & Arms
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(7, -48 - bob);
+            ctx.lineTo(9, -32 - bob);
+            ctx.stroke();
+
+            // Hands (holding Young Carer card if presented)
+            ctx.fillStyle = '#fed7aa';
+            ctx.beginPath();
+            ctx.arc(9, -30 - bob, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (gameState.stats.hasPresentedIdCard) {
+                ctx.fillStyle = '#fde68a';
+                ctx.fillRect(8, -32 - bob, 8, 6);
+                ctx.strokeStyle = '#b45309';
+                ctx.lineWidth = 0.8;
+                ctx.strokeRect(8, -32 - bob, 8, 6);
+            }
+
+            // Head & Skin Tone
+            ctx.fillStyle = '#fed7aa';
+            ctx.beginPath();
+            ctx.arc(0, -68 - bob, 11.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Cheeks & Subtle Blush
+            ctx.fillStyle = 'rgba(244, 114, 182, 0.4)';
+            ctx.beginPath();
+            ctx.ellipse(3, -65 - bob, 2.5, 1.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eye
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(3.5, -68 - bob, 1.6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Auburn Braided Hair
+            ctx.fillStyle = '#451a03';
+            ctx.beginPath();
+            ctx.arc(-1, -72 - bob, 13, Math.PI * 0.75, Math.PI * 2.2);
+            ctx.fill();
+            // Long braid hanging over shoulder
+            ctx.strokeStyle = '#451a03';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(-8, -66 - bob);
+            ctx.quadraticCurveTo(-12, -52 - bob, -10, -38 - bob);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function updatePlayer() {
+            const p = gameState.player;
+            const dx = p.targetX - p.x;
+            if (Math.abs(dx) > 2) {
+                p.isMoving = true;
+                p.direction = dx > 0 ? 1 : -1;
+                p.x += p.direction * p.speed;
+                p.bobTimer += 0.22;
+                p.footstepTimer += 1;
+                if (p.footstepTimer % 18 === 0) {
+                    audio.playFootstep();
+                }
+            } else {
+                p.isMoving = false;
+                p.bobTimer = 0;
+            }
+
+            // Screen boundary clamping
+            const canvasW = canvas.getBoundingClientRect().width;
+            p.x = Math.max(40, Math.min(canvasW - 40, p.x));
+
+            // Check for nearby interactive objects
+            const objects = gameState.interactiveObjects[gameState.scene];
+            activeInteractable = null;
+            for (let obj of objects) {
+                if (Math.abs(p.x - obj.x) < obj.width * 0.7) {
+                    activeInteractable = obj;
+                    break;
+                }
+            }
+
+            // Update on-screen interaction prompt
+            const hintEl = document.getElementById('interactionHint');
+            if (activeInteractable) {
+                const rect = canvas.getBoundingClientRect();
+                const groundY = rect.height * 0.78;
+                hintEl.style.left = `${activeInteractable.x}px`;
+                hintEl.style.top = `${groundY - 110}px`;
+                document.getElementById('hintText').innerText = activeInteractable.actionPrompt;
+                hintEl.classList.remove('hidden');
+            } else {
+                hintEl.classList.add('hidden');
+            }
+        }
+
+        function render() {
+            const rect = canvas.getBoundingClientRect();
+            const w = rect.width;
+            const h = rect.height;
+            if (w === 0 || h === 0) return;
+
+            ctx.clearRect(0, 0, w, h);
+            const groundY = h * 0.78;
+            const t = animTick;
+
+            if (gameState.scene === 'street') {
+                drawStreetExterior(w, h, t);
+            } else {
+                drawPharmacyInterior(w, h, t);
+            }
+
+            // Draw Seren
+            const bob = gameState.player.isMoving ? Math.sin(gameState.player.bobTimer) * 3 : Math.sin(t * 0.06) * 1.5;
+            drawSeren(gameState.player.x, groundY, bob, gameState.player.direction);
+        }
+
+        function gameLoop() {
+            animTick++;
+            updatePlayer();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        /* -------------------------------------------------------------
+           4. SCENE TRANSITIONS & PHARMACY ENCOUNTER LOGIC
+        ------------------------------------------------------------- */
+        function enterPharmacy() {
+            audio.playDoorBell();
+            audio.setIndoorMuffle(true);
+            gameState.scene = 'pharmacy_interior';
+            gameState.player.x = 120;
+            gameState.player.targetX = 120;
+            document.getElementById('locationIcon').className = 'fa-solid fa-shop text-amber-400 text-xs';
+            document.getElementById('locationTitle').innerText = 'Evans Pharmacy • Dispensing Counter';
+            document.getElementById('objectiveBanner').innerText = "Approach the counter and speak with Pharmacist Mr. Evans";
+            showDialogue("Seren", "The bell jingled. It smells of antiseptics, cedar wood, and cough drops. I hope Dad's prescription is ready... and I hope they don't give me a hard time like last time.");
+        }
+
+        function exitToStreet() {
+            audio.playDoorBell();
+            audio.setIndoorMuffle(false);
+            gameState.scene = 'street';
+            gameState.player.x = 550;
+            gameState.player.targetX = 550;
+            document.getElementById('locationIcon').className = 'fa-solid fa-cloud-showers-heavy text-amber-400 text-xs';
+            document.getElementById('locationTitle').innerText = 'High Street • Rhondda Valley';
+            document.getElementById('objectiveBanner').innerText = gameState.stats.prescriptionsFilled ? 
+                "Catch the 17:15 bus back home to give Dad his medication" : 
+                "Enter Evans Pharmacy to collect Dad's prescription";
+        }
+
+        function triggerPharmacistEncounter() {
+            audio.playBlip();
+            const stats = gameState.stats;
+
+            if (stats.prescriptionsFilled) {
+                showDialogue("Mr. Evans (Pharmacist)", "You're all sorted, Seren. Give your father my very warmest regards. Safe journey on the bus home!", [
+                    {
+                        text: "Diolch yn fawr, Mr. Evans!",
+                        onClick: () => closeDialogue()
+                    }
+                ]);
+                return;
+            }
+
+            if (!stats.hasPresentedIdCard) {
+                // First encounter: Young Carer barrier where age is challenged
+                stats.composure = Math.max(50, stats.composure - 15);
+                updateComposureUI();
+
+                showDialogue("Mr. Evans (Pharmacist)", "Afternoon! Can I help you with something from the shelves? ...Wait, you're picking up a repeat prescription for David Hughes? Controlled pain management medication? I'm afraid our regulations state we can only dispense this to an adult carer.", [
+                    {
+                        text: "Show Dad's NHS GP prescription slip",
+                        onClick: () => handleShowSlipOnly()
+                    },
+                    {
+                        text: "Present Young Carer ID & Authorization Card",
+                        onClick: () => openIdCardModal()
+                    }
+                ]);
+            } else {
+                completePrescriptionHandover();
+            }
+        }
+
+        function handleShowSlipOnly() {
+            audio.playBlip();
+            gameState.stats.composure = Math.max(35, gameState.stats.composure - 10);
+            updateComposureUI();
+
+            showDialogue("Mr. Evans (Pharmacist)", "I see the doctor's slip, but because of your age, I need formal proof that you are authorized to collect on his behalf. Without registered carer verification, I could get in serious trouble with the health board.", [
+                {
+                    text: "Search Satchel for Official Young Carer Card",
+                    onClick: () => openIdCardModal()
+                },
+                {
+                    text: "Politely explain my caring role at home",
+                    onClick: () => {
+                        showDialogue("Seren", "I help my dad with everything at home—his meals, managing his appointments, and his daily medication routine. Our GP registered me under the local Carers scheme.");
+                    }
+                }
+            ]);
+        }
+
+        function completePrescriptionHandover() {
+            audio.playCardChime();
+            gameState.stats.prescriptionsFilled = true;
+            gameState.stats.composure = 100;
+            updateComposureUI();
+
+            document.getElementById('objectiveBanner').innerText = "Prescription secured! You can now catch the valley bus home.";
+
+            showDialogue("Mr. Evans (Pharmacist)", "Ah, forgive me! I see the official Welsh Young Carers ID card with the GP authorization stamp. That makes everything clear and valid right away. Here is your father's medication all securely packed.", [
+                {
+                    text: "Diolch. This ID card makes such a difference.",
+                    onClick: () => {
+                        closeDialogue();
+                        showSuccessOverlay();
+                    }
+                }
+            ]);
+        }
+
+        function updateComposureUI() {
+            const val = gameState.stats.composure;
+            const bar = document.getElementById('composureBar');
+            const label = document.getElementById('composureLabel');
+            bar.style.width = `${val}%`;
+            label.innerText = `${val}%`;
+            if (val <= 40) {
+                bar.className = 'bg-rose-500 h-2.5 rounded-full transition-all duration-500';
+                label.className = 'text-xs font-mono text-rose-400 font-bold';
+            } else if (val <= 70) {
+                bar.className = 'bg-amber-400 h-2.5 rounded-full transition-all duration-500';
+                label.className = 'text-xs font-mono text-amber-400 font-bold';
+            } else {
+                bar.className = 'bg-emerald-400 h-2.5 rounded-full transition-all duration-500';
+                label.className = 'text-xs font-mono text-emerald-400 font-bold';
+            }
+        }
+
+        /* -------------------------------------------------------------
+           5. DIALOGUE & MODAL CONTROLLERS
+        ------------------------------------------------------------- */
+        function showDialogue(speaker, content, choices = []) {
+            const box = document.getElementById('dialogueBox');
+            const speakerEl = document.getElementById('dialogueSpeaker');
+            const contentEl = document.getElementById('dialogueContent');
+            const choicesEl = document.getElementById('dialogueChoices');
+            const badgeEl = document.getElementById('dialogueSpeakerBadge');
+
+            speakerEl.innerText = speaker;
+            contentEl.innerText = content;
+            badgeEl.className = speaker.includes('Seren') ? 'w-3 h-3 rounded-full bg-amber-400' : 'w-3 h-3 rounded-full bg-sky-400';
+
+            choicesEl.innerHTML = '';
+            if (choices.length > 0) {
+                choices.forEach(c => {
+                    const btn = document.createElement('button');
+                    btn.className = "px-4 py-2 rounded-xl bg-slate-900 hover:bg-amber-500 hover:text-slate-950 border border-slate-700 hover:border-amber-400 text-xs font-bold transition text-left flex items-center justify-between";
+                    btn.innerHTML = `<span>${c.text}</span> <i class="fa-solid fa-chevron-right text-[10px] ml-2"></i>`;
+                    btn.onclick = () => {
+                        audio.playBlip();
+                        c.onClick();
+                    };
+                    choicesEl.appendChild(btn);
+                });
+            } else {
+                const btn = document.createElement('button');
+                btn.className = "px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium self-end";
+                btn.innerText = "Continue";
+                btn.onclick = () => closeDialogue();
+                choicesEl.appendChild(btn);
+            }
+
+            box.classList.remove('hidden');
+        }
+
+        function closeDialogue() {
+            document.getElementById('dialogueBox').classList.add('hidden');
+        }
+
+        document.getElementById('closeDialogueBtn').onclick = closeDialogue;
+
+        /* ID Card Modal Handlers */
+        function openIdCardModal() {
+            closeDialogue();
+            document.getElementById('idCardModal').classList.remove('hidden');
+            renderIdCardAvatar();
+        }
+
+        function closeIdCardModal() {
+            document.getElementById('idCardModal').classList.add('hidden');
+        }
+
+        document.getElementById('closeIdModalBtn').onclick = closeIdCardModal;
+
+        document.getElementById('presentIdCardBtn').onclick = () => {
+            closeIdCardModal();
+            gameState.stats.hasPresentedIdCard = true;
+            completePrescriptionHandover();
+        };
+
+        function renderIdCardAvatar() {
+            const avatarCanvas = document.getElementById('idCardAvatarCanvas');
+            const actx = avatarCanvas.getContext('2d');
+            actx.clearRect(0, 0, 80, 96);
+            // Navy backdrop
+            actx.fillStyle = '#0f172a';
+            actx.fillRect(0, 0, 80, 96);
+            // Shoulders & Yellow Coat
+            actx.fillStyle = '#f59e0b';
+            actx.beginPath();
+            actx.roundRect(14, 55, 52, 45, [14, 14, 0, 0]);
+            actx.fill();
+            // Rollneck
+            actx.fillStyle = '#1e293b';
+            actx.fillRect(32, 48, 16, 12);
+            // Head
+            actx.fillStyle = '#fed7aa';
+            actx.beginPath();
+            actx.arc(40, 36, 16, 0, Math.PI * 2);
+            actx.fill();
+            // Auburn Hair
+            actx.fillStyle = '#451a03';
+            actx.beginPath();
+            actx.arc(39, 32, 18, Math.PI * 0.8, Math.PI * 2.2);
+            actx.fill();
+            // Eyes
+            actx.fillStyle = '#0f172a';
+            actx.fillRect(35, 34, 3, 3);
+            actx.fillRect(43, 34, 3, 3);
+            // Smile
+            actx.strokeStyle = '#b45309';
+            actx.lineWidth = 1.5;
+            actx.beginPath();
+            actx.arc(40, 42, 4, 0.2, Math.PI - 0.2);
+            actx.stroke();
+        }
+
+        /* Satchel Modal Handlers */
+        function openSatchel() {
+            const list = document.getElementById('satchelItemsList');
+            list.innerHTML = '';
+            gameState.inventory.forEach(item => {
+                const el = document.createElement('div');
+                el.className = "p-3 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-amber-500/40 transition flex items-start gap-3";
+                el.innerHTML = `
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                        <i class="fa-solid ${item.icon}"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold text-white">${item.name}</h4>
+                            <span class="text-[10px] font-mono text-amber-400">${item.tag}</span>
+                        </div>
+                        <p class="text-[11px] text-slate-300 mt-0.5 leading-relaxed">${item.description}</p>
+                    </div>
+                `;
+                if (item.id === 'id_card') {
+                    el.onclick = () => {
+                        closeSatchel();
+                        openIdCardModal();
+                    };
+                    el.classList.add('cursor-pointer', 'hover:bg-slate-800/60');
+                }
+                list.appendChild(el);
+            });
+            document.getElementById('satchelModal').classList.remove('hidden');
+        }
+
+        function closeSatchel() {
+            document.getElementById('satchelModal').classList.add('hidden');
+        }
+
+        document.getElementById('openSatchelBtn').onclick = openSatchel;
+        document.getElementById('closeSatchelModalBtn').onclick = closeSatchel;
+
+        /* Success & Replay Handlers */
+        function showSuccessOverlay() {
+            document.getElementById('successOverlay').classList.remove('hidden');
+        }
+
+        document.getElementById('dismissSuccessBtn').onclick = () => {
+            document.getElementById('successOverlay').classList.add('hidden');
+        };
+
+        document.getElementById('replayBtn').onclick = () => {
+            document.getElementById('successOverlay').classList.add('hidden');
+            gameState.scene = 'street';
+            gameState.player.x = 120;
+            gameState.player.targetX = 120;
+            gameState.stats.prescriptionsFilled = false;
+            gameState.stats.hasPresentedIdCard = false;
+            gameState.stats.composure = 85;
+            updateComposureUI();
+            audio.setIndoorMuffle(false);
+            document.getElementById('locationIcon').className = 'fa-solid fa-cloud-showers-heavy text-amber-400 text-xs';
+            document.getElementById('locationTitle').innerText = 'High Street • Rhondda Valley';
+            document.getElementById('objectiveBanner').innerText = "Collect Dad's chronic pain repeat medication from Evans Pharmacy";
+        };
+
+        /* -------------------------------------------------------------
+           6. INPUT & TOUCH EVENT CONTROLS
+        ------------------------------------------------------------- */
+        const keys = {};
+
+        window.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            audio.init();
+
+            if (e.key.toLowerCase() === 'e' || e.key === ' ' || e.key === 'Enter') {
+                if (activeInteractable) {
+                    activeInteractable.onInteract();
+                }
+            } else if (e.key.toLowerCase() === 'i') {
+                openSatchel();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // Continuous keyboard checking in loop
+        setInterval(() => {
+            if (keys['arrowleft'] || keys['a']) {
+                gameState.player.targetX = gameState.player.x - 20;
+            } else if (keys['arrowright'] || keys['d']) {
+                gameState.player.targetX = gameState.player.x + 20;
+            }
+        }, 30);
+
+        // Click / Tap on canvas to walk Seren there
+        canvas.addEventListener('click', (e) => {
+            audio.init();
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            gameState.player.targetX = clickX;
+        });
+
+        // Touch Control Buttons
+        const leftBtn = document.getElementById('touchLeftBtn');
+        const rightBtn = document.getElementById('touchRightBtn');
+        const interactBtn = document.getElementById('touchInteractBtn');
+
+        let leftInterval = null, rightInterval = null;
+
+        leftBtn.addEventListener('pointerdown', () => {
+            audio.init();
+            leftInterval = setInterval(() => { gameState.player.targetX = gameState.player.x - 25; }, 40);
+        });
+        const stopLeft = () => { if (leftInterval) clearInterval(leftInterval); leftInterval = null; };
+        leftBtn.addEventListener('pointerup', stopLeft);
+        leftBtn.addEventListener('pointerleave', stopLeft);
+
+        rightBtn.addEventListener('pointerdown', () => {
+            audio.init();
+            rightInterval = setInterval(() => { gameState.player.targetX = gameState.player.x + 25; }, 40);
+        });
+        const stopRight = () => { if (rightInterval) clearInterval(rightInterval); rightInterval = null; };
+        rightBtn.addEventListener('pointerup', stopRight);
+        rightBtn.addEventListener('pointerleave', stopRight);
+
+        interactBtn.addEventListener('click', () => {
+            audio.init();
+            if (activeInteractable) {
+                activeInteractable.onInteract();
+            } else {
+                showDialogue("Seren", "Nothing right here to inspect. Let's walk over to the chemist door or counter.");
+            }
+        });
+
+        // Audio Toggle
+        document.getElementById('toggleAudioBtn').onclick = () => {
+            audio.init();
+            const isMuted = audio.toggleMute();
+            document.getElementById('audioIcon').className = isMuted ? 'fa-solid fa-volume-xmark text-slate-500' : 'fa-solid fa-volume-high text-amber-400';
+            document.getElementById('audioText').innerText = isMuted ? 'Muted' : 'Atmosphere On';
+        };
+
+        // Initialize on window load
+        window.onload = function() {
+            resizeCanvas();
+            renderIdCardAvatar();
+            gameLoop();
+        };
+    </script>
+</body>
+</html>
