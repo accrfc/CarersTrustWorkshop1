@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcade Fighter: Seren vs Financial Pressures - ProMo Cymru Demo</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Retro Arcade Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #050508;
+            user-select: none;
+            overflow-x: hidden;
+        }
+        .arcade-font {
+            font-family: 'Press Start 2P', monospace;
+        }
+        .scanlines {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+        .arcade-glow {
+            text-shadow: 0 0 8px rgba(245, 158, 11, 0.6), 0 0 20px rgba(239, 68, 68, 0.4);
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col items-center justify-between p-3 sm:p-5">
+
+    <!-- Top Status Header -->
+    <header class="w-full max-w-5xl flex items-center justify-between border-b border-amber-500/30 pb-3 mb-2">
+        <div class="flex items-center gap-3">
+            <span class="px-2.5 py-1 bg-red-600/20 border border-red-500 text-red-400 arcade-font text-[10px] tracking-wider rounded animate-pulse">
+                LIVE DEMO
+            </span>
+            <h1 class="text-sm sm:text-base font-extrabold tracking-wide uppercase text-amber-400 arcade-font">
+                Carers Trust • Financial Pressure Arena
+            </h1>
+        </div>
+        <div class="text-[11px] text-slate-400 flex items-center gap-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>Style: Arcade Fighter (Capcom '90s Vibe)</span>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="w-full max-w-5xl flex flex-col gap-3 relative">
+        
+        <!-- Viewport Box -->
+        <div class="relative w-full aspect-[16/9] bg-slate-950 rounded-2xl overflow-hidden border-2 border-amber-500/50 shadow-[0_0_35px_rgba(245,158,11,0.2)]">
+            <canvas id="gameCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+            <div class="scanlines absolute inset-0"></div>
+
+            <!-- Dialogue / Choice Modal Overlay -->
+            <div id="decisionModal" class="hidden absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-20">
+                <div class="max-w-xl w-full bg-slate-900 border-2 border-amber-500 rounded-xl p-5 shadow-2xl flex flex-col gap-4 text-center">
+                    <div class="inline-block mx-auto px-3 py-1 bg-amber-500/20 border border-amber-400 rounded text-amber-300 arcade-font text-[11px]">
+                        CRITICAL DECISION: BUDGET CRISIS
+                    </div>
+                    <h3 id="modalTitle" class="text-lg font-bold text-white"></h3>
+                    <p id="modalDesc" class="text-xs text-slate-300 leading-relaxed"></p>
+                    
+                    <div id="modalChoices" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                        <!-- Injected dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage Victory / Defeat Screen -->
+            <div id="endModal" class="hidden absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center p-6 text-center z-30">
+                <div id="endBanner" class="arcade-font text-2xl sm:text-3xl text-amber-400 mb-2 arcade-glow"></div>
+                <p id="endSubtitle" class="text-sm text-slate-300 max-w-md mb-6 leading-relaxed"></p>
+                <div id="endStats" class="bg-slate-900 border border-slate-700 rounded-xl p-4 mb-6 max-w-md w-full text-xs space-y-2 text-left"></div>
+                <button onclick="resetGame()" class="px-6 py-3 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black arcade-font text-xs rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-all">
+                    REPLAY STAGE [ENTER]
+                </button>
+            </div>
+        </div>
+
+        <!-- Touch Controls (Mobile Friendly) & Instructions -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div class="flex items-center gap-3">
+                <span class="text-amber-400 font-bold arcade-font text-[10px]">CONTROLS:</span>
+                <span class="text-slate-300"><kbd class="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">A</kbd>/<kbd class="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">D</kbd> or <kbd class="bg-slate-800 px-2 py-0.5 rounded">←</kbd><kbd class="bg-slate-800 px-2 py-0.5 rounded">→</kbd> Move</span>
+                <span class="text-slate-300"><kbd class="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">W</kbd> or <kbd class="bg-slate-800 px-2 py-0.5 rounded">Space</kbd> Jump</span>
+                <span class="text-slate-300"><kbd class="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">J</kbd> or <kbd class="bg-slate-800 px-2 py-0.5 rounded">Z</kbd> Strike</span>
+                <span class="text-slate-300"><kbd class="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">E</kbd> Interact</span>
+            </div>
+            <div class="flex gap-2">
+                <button onpointerdown="touchInput('left', true)" onpointerup="touchInput('left', false)" class="sm:hidden px-3 py-1.5 bg-slate-800 rounded text-slate-200">◀</button>
+                <button onpointerdown="touchInput('right', true)" onpointerup="touchInput('right', false)" class="sm:hidden px-3 py-1.5 bg-slate-800 rounded text-slate-200">▶</button>
+                <button onpointerdown="touchInput('jump', true)" onpointerup="touchInput('jump', false)" class="sm:hidden px-3 py-1.5 bg-slate-800 rounded text-amber-400">JUMP</button>
+                <button onpointerdown="touchInput('attack', true)" class="sm:hidden px-3 py-1.5 bg-red-800 rounded text-white">HIT</button>
+                <button onpointerdown="touchInput('interact', true)" class="sm:hidden px-3 py-1.5 bg-blue-800 rounded text-white">ACTION</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Context Footer for Co-Designers -->
+    <footer class="w-full max-w-5xl mt-3 text-center text-[11px] text-slate-500">
+        Co-Design Sandbox • Theme: Unlocking Support Grants & Countering Household Utility Pressures
+    </footer>
+
+    <!-- Game Engine Logic -->
+    <script>
+        // -------------------------------------------------------------
+        // 1. AUDIO SYNTHESIZER (Web Audio API - Single File Mandate)
+        // -------------------------------------------------------------
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+            playTone(freq, type, duration, slideFreq = null) {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    if (slideFreq) {
+                        osc.frequency.exponentialRampToValueAtTime(slideFreq, this.ctx.currentTime + duration);
+                    }
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            }
+            punch() {
+                this.init();
+                this.playTone(180, 'square', 0.12, 40);
+            }
+            coin() {
+                this.init();
+                this.playTone(587, 'sine', 0.08, 880);
+            }
+            grantUnlock() {
+                this.init();
+                this.playTone(330, 'triangle', 0.1, 660);
+                setTimeout(() => this.playTone(660, 'sine', 0.25, 1320), 80);
+            }
+            hurt() {
+                this.init();
+                this.playTone(120, 'sawtooth', 0.2, 30);
+            }
+            victory() {
+                this.init();
+                [261, 329, 392, 523].forEach((f, i) => {
+                    setTimeout(() => this.playTone(f, 'square', 0.2), i * 110);
+                });
+            }
+        }
+        const sfx = new SoundFX();
+
+        // -------------------------------------------------------------
+        // 2. DATA SCHEMA & STATE
+        // -------------------------------------------------------------
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Dynamic internal resolution
+        let VW = 960;
+        let VH = 540;
+        let GROUND_Y = 440;
+
+        let gameState = {
+            serenEnergy: 85,      // Seren's physical & emotional stamina (0 - 100)
+            dadEnergy: 60,        // Dad's comfort/health level (0 - 100)
+            finances: 45,         // Budget / Grant balance (£ / Points)
+            stageTimer: 90,       // Round seconds
+            activeChallengeSolved: false,
+            grantKnowledgeRevealed: false,
+            currentDecision: null,
+            isGameOver: false,
+            hasWon: false
+        };
+
+        const keys = {
+            left: false,
+            right: false,
+            jump: false,
+            attack: false,
+            interact: false
+        };
+
+        function touchInput(key, pressed) {
+            sfx.init();
+            if (key === 'attack' && pressed) doAttack();
+            if (key === 'interact' && pressed) doInteract();
+            keys[key] = pressed;
+        }
+
+        // -------------------------------------------------------------
+        // 3. ENTITIES & HITBOXES
+        // -------------------------------------------------------------
+        const player = {
+            x: 120,
+            y: GROUND_Y,
+            vx: 0,
+            vy: 0,
+            w: 48,
+            h: 74,
+            speed: 5.5,
+            jumpForce: 13.5,
+            isGrounded: true,
+            facing: 1, // 1: right, -1: left
+            isAttacking: false,
+            attackTimer: 0,
+            hitbox: { x: 0, y: 0, w: 0, h: 0 }
+        };
+
+        // Boss Enemy: "The Overdue Winter Utility Bill"
+        const enemyBoss = {
+            x: 750,
+            y: GROUND_Y,
+            w: 80,
+            h: 110,
+            health: 100,
+            maxHealth: 100,
+            name: "OVERDUE HEATING TARIFF",
+            type: "financial_stress",
+            shakeTimer: 0,
+            isDefeated: false,
+            dialogueTriggered: false
+        };
+
+        // Interactive Grant Kiosk: Carers Trust Support Station
+        const grantKiosk = {
+            x: 440,
+            y: GROUND_Y - 95,
+            w: 85,
+            h: 95,
+            active: true,
+            label: "WELSH CARER SUPPORT HUB",
+            pulse: 0
+        };
+
+        // Collectible Grant Coins / Advice Slips
+        let grantTokens = [
+            { x: 260, y: GROUND_Y - 70, collected: false, value: 20, name: "Discretionary Assistance Fund" },
+            { x: 340, y: GROUND_Y - 140, collected: false, value: 25, name: "Carer Fuel Allowance Tip" },
+            { x: 610, y: GROUND_Y - 110, collected: false, value: 30, name: "Third Sector Hardship Grant" }
+        ];
+
+        // Impact particle sparks
+        let particles = [];
+        let screenShake = 0;
+
+        // -------------------------------------------------------------
+        // 4. RESIZE & CANVAS MANAGEMENT
+        // -------------------------------------------------------------
+        function resize() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = VW;
+            canvas.height = VH;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // -------------------------------------------------------------
+        // 5. INPUT LISTENERS
+        // -------------------------------------------------------------
+        window.addEventListener('keydown', (e) => {
+            sfx.init();
+            if (e.repeat) return;
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.jump = true;
+            if (e.code === 'KeyJ' || e.code === 'KeyZ') doAttack();
+            if (e.code === 'KeyE') doInteract();
+            if (e.code === 'Enter' && (gameState.isGameOver || gameState.hasWon)) resetGame();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.jump = false;
+        });
+
+        function doAttack() {
+            if (player.isAttacking) return;
+            player.isAttacking = true;
+            player.attackTimer = 16;
+            sfx.punch();
+
+            // Spawn fighter attack punch
+            const attackReach = 55;
+            const punchX = player.facing === 1 ? player.x + player.w : player.x - attackReach;
+            const punchY = player.y - 50;
+
+            // Check collision with the Bill Boss
+            if (!enemyBoss.isDefeated &&
+                punchX < enemyBoss.x + enemyBoss.w &&
+                punchX + attackReach > enemyBoss.x &&
+                punchY < enemyBoss.y &&
+                punchY + 40 > enemyBoss.y - enemyBoss.h) {
+                
+                // Attack hits Boss!
+                const damage = gameState.grantKnowledgeRevealed ? 25 : 8; // Grants give 3x damage!
+                enemyBoss.health = Math.max(0, enemyBoss.health - damage);
+                enemyBoss.shakeTimer = 12;
+                screenShake = 6;
+                spawnSparks(enemyBoss.x + enemyBoss.w/2, enemyBoss.y - enemyBoss.h/2, 16, '#f59e0b');
+
+                // Seren loses 2 energy from physical stress if fighting without grant knowledge
+                if (!gameState.grantKnowledgeRevealed) {
+                    gameState.serenEnergy = Math.max(10, gameState.serenEnergy - 2);
+                }
+
+                if (enemyBoss.health <= 0) {
+                    enemyBoss.isDefeated = true;
+                    gameState.activeChallengeSolved = true;
+                    sfx.victory();
+                    setTimeout(checkVictoryCondition, 500);
+                }
+            }
+        }
+
+        function doInteract() {
+            // Interact with Grant Kiosk
+            const distKiosk = Math.abs((player.x + player.w/2) - (grantKiosk.x + grantKiosk.w/2));
+            if (distKiosk < 70 && !gameState.currentDecision) {
+                openBudgetDecision();
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 6. CO-DESIGN NARRATIVE DECISION ENGINE
+        // -------------------------------------------------------------
+        function openBudgetDecision() {
+            const modal = document.getElementById('decisionModal');
+            const title = document.getElementById('modalTitle');
+            const desc = document.getElementById('modalDesc');
+            const choices = document.getElementById('modalChoices');
+
+            title.innerText = "CO-DESIGN DILEMMA: The Heating Bill is Due";
+            desc.innerHTML = `
+                The family flat is freezing, Dad's joint inflammation is worsening, and an urgent £140 energy demand just arrived. 
+                Many young carers are unaware of the <strong class="text-amber-400">Carer Support Grants</strong> available in Wales. 
+                What action will Seren take?
+            `;
+
+            choices.innerHTML = `
+                <button onclick="resolveDecision(1)" class="p-3 text-left rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-amber-400 transition-all">
+                    <div class="arcade-font text-[10px] text-amber-300 mb-1">OPTION A: Solo Sacrifice</div>
+                    <div class="text-xs text-slate-300">Cut down on personal meals and skip school trips to pay directly.</div>
+                    <div class="text-[10px] text-red-400 mt-2">Seren Energy -25 | Dad Energy +10 | Budget -£40</div>
+                </button>
+                <button onclick="resolveDecision(2)" class="p-3 text-left rounded-lg bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-600 hover:border-emerald-400 transition-all">
+                    <div class="arcade-font text-[10px] text-emerald-400 mb-1">OPTION B: Access Support Hub</div>
+                    <div class="text-xs text-slate-300">Register for Carers Trust Emergency Grant & Wales Fuel Scheme.</div>
+                    <div class="text-[10px] text-emerald-300 mt-2">Grant Boost +£80 | Boss Vulnerable! | Dad Energy +25</div>
+                </button>
+            `;
+
+            modal.classList.remove('hidden');
+            gameState.currentDecision = true;
+        }
+
+        window.resolveDecision = function(choice) {
+            document.getElementById('decisionModal').classList.add('hidden');
+            gameState.currentDecision = false;
+
+            if (choice === 1) {
+                // Solo Sacrifice
+                gameState.serenEnergy = Math.max(10, gameState.serenEnergy - 25);
+                gameState.dadEnergy = Math.min(100, gameState.dadEnergy + 10);
+                gameState.finances = Math.max(0, gameState.finances - 40);
+                sfx.hurt();
+                spawnSparks(player.x, player.y - 40, 20, '#ef4444');
+            } else {
+                // Accessed Grant Knowledge
+                gameState.grantKnowledgeRevealed = true;
+                gameState.finances += 80;
+                gameState.dadEnergy = Math.min(100, gameState.dadEnergy + 25);
+                gameState.serenEnergy = Math.min(100, gameState.serenEnergy + 15);
+                sfx.grantUnlock();
+                spawnSparks(grantKiosk.x + grantKiosk.w/2, grantKiosk.y, 35, '#22c55e');
+            }
+        };
+
+        function spawnSparks(x, y, count, color) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 6;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1.0,
+                    decay: 0.03 + Math.random() * 0.04,
+                    color: color
+                });
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 7. PHYSICS & SIMULATION
+        // -------------------------------------------------------------
+        let lastTime = performance.now();
+        let timerAccumulator = 0;
+
+        function update(dt) {
+            if (gameState.isGameOver || gameState.hasWon || gameState.currentDecision) return;
+
+            // Stage Timer countdown
+            timerAccumulator += dt;
+            if (timerAccumulator >= 1.0) {
+                gameState.stageTimer = Math.max(0, gameState.stageTimer - 1);
+                timerAccumulator = 0;
+                if (gameState.stageTimer === 0) {
+                    triggerGameOver("TIME OUT: Unpaid Bills Overwhelmed Household");
+                }
+            }
+
+            // Screen Shake decay
+            if (screenShake > 0) screenShake *= 0.9;
+            if (screenShake < 0.2) screenShake = 0;
+
+            // Attack timer
+            if (player.attackTimer > 0) {
+                player.attackTimer--;
+                if (player.attackTimer === 0) player.isAttacking = false;
+            }
+
+            // Horizontal Movement
+            if (keys.left) {
+                player.vx = -player.speed;
+                player.facing = -1;
+            } else if (keys.right) {
+                player.vx = player.speed;
+                player.facing = 1;
+            } else {
+                player.vx *= 0.7;
+            }
+
+            // Jumping
+            if (keys.jump && player.isGrounded) {
+                player.vy = -player.jumpForce;
+                player.isGrounded = false;
+                sfx.playTone(320, 'square', 0.1, 480);
+            }
+
+            // Gravity
+            player.vy += 0.65;
+            player.x += player.vx;
+            player.y += player.vy;
+
+            // Ground floor boundary
+            if (player.y >= GROUND_Y) {
+                player.y = GROUND_Y;
+                player.vy = 0;
+                player.isGrounded = true;
+            }
+
+            // Level boundaries
+            if (player.x < 20) player.x = 20;
+            if (player.x > VW - player.w - 20) player.x = VW - player.w - 20;
+
+            // Collect Grant Slips
+            grantTokens.forEach(token => {
+                if (!token.collected) {
+                    const dx = (player.x + player.w/2) - token.x;
+                    const dy = (player.y - player.h/2) - token.y;
+                    if (Math.hypot(dx, dy) < 32) {
+                        token.collected = true;
+                        gameState.finances += token.value;
+                        gameState.serenEnergy = Math.min(100, gameState.serenEnergy + 5);
+                        sfx.coin();
+                        spawnSparks(token.x, token.y, 14, '#facc15');
+                    }
+                }
+            });
+
+            // Boss Shake
+            if (enemyBoss.shakeTimer > 0) enemyBoss.shakeTimer--;
+
+            // Kiosk pulse
+            grantKiosk.pulse += 0.05;
+
+            // Particles update
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= p.decay;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 8. PROCEDURAL 2D ARCADE FIGHTER RENDERER
+        // -------------------------------------------------------------
+        function render() {
+            ctx.save();
+            ctx.clearRect(0, 0, VW, VH);
+
+            // Screen shake translation
+            if (screenShake > 0) {
+                const sx = (Math.random() - 0.5) * screenShake * 4;
+                const sy = (Math.random() - 0.5) * screenShake * 4;
+                ctx.translate(sx, sy);
+            }
+
+            // 1. Capcom '90s Dramatic Gradient Backdrop
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, VH);
+            bgGrad.addColorStop(0, '#110b29');
+            bgGrad.addColorStop(0.45, '#3b1219');
+            bgGrad.addColorStop(0.8, '#1e0811');
+            bgGrad.addColorStop(1, '#050508');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, VW, VH);
+
+            // 2. High-energy Comic Radial Speed Lines
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.08)';
+            ctx.lineWidth = 1.5;
+            const centerX = VW * 0.5;
+            const centerY = VH * 0.35;
+            for (let a = 0; a < Math.PI * 2; a += 0.25) {
+                ctx.beginPath();
+                ctx.moveTo(centerX + Math.cos(a) * 60, centerY + Math.sin(a) * 60);
+                ctx.lineTo(centerX + Math.cos(a) * 750, centerY + Math.sin(a) * 750);
+                ctx.stroke();
+            }
+
+            // 3. Distant Welsh Valley Rooftops & Power Lines (Atmospheric silhouettes)
+            ctx.fillStyle = '#0b0817';
+            for (let hx = 0; hx < VW; hx += 80) {
+                const hHeight = 85 + ((hx * 13) % 40);
+                ctx.fillRect(hx, GROUND_Y - hHeight, 72, hHeight);
+                // Roof slant
+                ctx.beginPath();
+                ctx.moveTo(hx - 4, GROUND_Y - hHeight);
+                ctx.lineTo(hx + 36, GROUND_Y - hHeight - 24);
+                ctx.lineTo(hx + 76, GROUND_Y - hHeight);
+                ctx.fill();
+            }
+
+            // 4. Ground Stage (Checkered Arcade Perspective Floor)
+            const floorGrad = ctx.createLinearGradient(0, GROUND_Y, 0, VH);
+            floorGrad.addColorStop(0, '#261214');
+            floorGrad.addColorStop(1, '#0a0508');
+            ctx.fillStyle = floorGrad;
+            ctx.fillRect(0, GROUND_Y, VW, VH - GROUND_Y);
+
+            // Glowing boundary line
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, GROUND_Y);
+            ctx.lineTo(VW, GROUND_Y);
+            ctx.stroke();
+
+            // 5. Draw Carers Support Kiosk
+            drawGrantKiosk();
+
+            // 6. Draw Collectible Grants / Info Tokens
+            drawTokens();
+
+            // 7. Draw Overdue Bill Boss
+            drawBoss();
+
+            // 8. Draw Player (Fighter Seren)
+            drawPlayer();
+
+            // 9. Draw Particle Sparks
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, Math.max(1, 4 * p.life), 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 10. Top Arcade Dual-Health & Status HUD
+            drawArcadeHUD();
+
+            ctx.restore();
+        }
+
+        // --- SUB-RENDERERS ---
+
+        function drawArcadeHUD() {
+            const barW = 280;
+            const barH = 16;
+            const topY = 28;
+
+            // Player 1: Seren
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(40, topY, barW, barH);
+            ctx.fillStyle = '#22c55e'; // Green Seren Health
+            ctx.fillRect(42, topY + 2, (barW - 4) * (gameState.serenEnergy / 100), barH - 4);
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(40, topY, barW, barH);
+
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = '10px "Press Start 2P", monospace';
+            ctx.fillText('SEREN (CARER)', 40, topY - 8);
+
+            // Dad's Energy / Comfort Meter (Relational Status Bar)
+            const dadW = 180;
+            const dadH = 10;
+            const dadY = topY + 24;
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(40, dadY, dadW, dadH);
+            ctx.fillStyle = '#38bdf8'; // Blue Dad Care bar
+            ctx.fillRect(42, dadY + 2, (dadW - 4) * (gameState.dadEnergy / 100), dadH - 4);
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(40, dadY, dadW, dadH);
+            ctx.fillStyle = '#7dd3fc';
+            ctx.font = '8px "Press Start 2P", monospace';
+            ctx.fillText(`DAD WELLBEING: ${Math.round(gameState.dadEnergy)}%`, 40, dadY + 20);
+
+            // VS Logo in Center
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#facc15';
+            ctx.font = 'bold 16px "Press Start 2P", monospace';
+            ctx.fillText('VS', VW / 2, topY + 14);
+
+            // Budget Wallet
+            ctx.font = '10px "Press Start 2P", monospace';
+            ctx.fillStyle = '#4ade80';
+            ctx.fillText(`GRANT FUND: £${gameState.finances}`, VW / 2, topY + 36);
+
+            // Timer in Center Box
+            ctx.fillStyle = '#f87171';
+            ctx.font = '12px "Press Start 2P", monospace';
+            ctx.fillText(`00:${gameState.stageTimer.toString().padStart(2, '0')}`, VW / 2, topY - 8);
+
+            // Boss Bar: Overdue Bill
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#ef4444';
+            ctx.font = '10px "Press Start 2P", monospace';
+            ctx.fillText(enemyBoss.name, VW - 40, topY - 8);
+
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(VW - 40 - barW, topY, barW, barH);
+            ctx.fillStyle = '#ef4444'; // Red Boss meter
+            ctx.fillRect(VW - 40 - barW + 2, topY + 2, (barW - 4) * (enemyBoss.health / enemyBoss.maxHealth), barH - 4);
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(VW - 40 - barW, topY, barW, barH);
+
+            // Boss Weakness Indicator
+            if (gameState.grantKnowledgeRevealed) {
+                ctx.fillStyle = '#facc15';
+                ctx.font = '8px "Press Start 2P", monospace';
+                ctx.fillText('VULNERABLE: GRANT APPLIED! (3X STRIKE)', VW - 40, topY + 26);
+            } else {
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '8px "Press Start 2P", monospace';
+                ctx.fillText('HIGH DEFENCE: UNCHECKED BILL', VW - 40, topY + 26);
+            }
+            ctx.textAlign = 'left';
+        }
+
+        function drawPlayer() {
+            ctx.save();
+            ctx.translate(player.x, player.y);
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.beginPath();
+            ctx.ellipse(player.w/2, 2, 22, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Flip rendering if facing left
+            if (player.facing === -1) {
+                ctx.scale(-1, 1);
+                ctx.translate(-player.w, 0);
+            }
+
+            const bounce = player.isGrounded ? Math.sin(performance.now() * 0.01) * 2 : 0;
+
+            // Combat Boots
+            ctx.fillStyle = '#1e1b4b';
+            ctx.fillRect(6, -14 + bounce, 12, 14);
+            ctx.fillRect(26, -14 + bounce, 12, 14);
+
+            // Legs
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(8, -32 + bounce, 9, 20);
+            ctx.fillRect(27, -32 + bounce, 9, 20);
+
+            // Yellow Fighter Windbreaker (Capcom Vibe Seren)
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(6, -64 + bounce, 34, 34);
+            ctx.fillStyle = '#d97706';
+            ctx.fillRect(6, -64 + bounce, 6, 34); // shading
+
+            // Red Carer's Scarf / Headband Bandana Tail
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(10, -68 + bounce, 24, 6);
+            ctx.beginPath();
+            ctx.moveTo(6, -66 + bounce);
+            ctx.lineTo(-8, -58 + bounce + Math.sin(performance.now() * 0.02) * 4);
+            ctx.lineTo(6, -62 + bounce);
+            ctx.fill();
+
+            // Head & Fierce determined expression
+            ctx.fillStyle = '#fed7aa';
+            ctx.beginPath();
+            ctx.arc(22, -74 + bounce, 11, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Auburn Hair
+            ctx.fillStyle = '#451a03';
+            ctx.beginPath();
+            ctx.arc(20, -78 + bounce, 12, Math.PI * 0.8, Math.PI * 2.2);
+            ctx.fill();
+
+            // Combat Gloves / Attack Arm
+            if (player.isAttacking) {
+                ctx.fillStyle = '#ef4444'; // Red Boxing Strike
+                ctx.beginPath();
+                ctx.arc(46, -48 + bounce, 11, 0, Math.PI * 2);
+                ctx.fill();
+                // Speed trail behind punch
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
+                ctx.fillRect(28, -53 + bounce, 16, 10);
+            } else {
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(32, -44 + bounce, 8, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        function drawBoss() {
+            ctx.save();
+            const shake = enemyBoss.shakeTimer > 0 ? (Math.random() - 0.5) * 8 : 0;
+            ctx.translate(enemyBoss.x + shake, enemyBoss.y);
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.beginPath();
+            ctx.ellipse(enemyBoss.w/2, 2, 45, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (enemyBoss.isDefeated) {
+                // Smashed bill stamps
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(0, -20, enemyBoss.w, 20);
+                ctx.fillStyle = '#22c55e';
+                ctx.font = '12px "Press Start 2P", monospace';
+                ctx.fillText('PAID IN FULL', -10, -30);
+                ctx.restore();
+                return;
+            }
+
+            // Monolithic Glowing Red Envelope / Tariff Block
+            const billGrad = ctx.createLinearGradient(0, -enemyBoss.h, 0, 0);
+            billGrad.addColorStop(0, '#991b1b');
+            billGrad.addColorStop(1, '#450a0a');
+            ctx.fillStyle = billGrad;
+            ctx.fillRect(0, -enemyBoss.h, enemyBoss.w, enemyBoss.h);
+
+            // Warning Stripe
+            ctx.fillStyle = '#facc15';
+            ctx.fillRect(6, -enemyBoss.h + 8, enemyBoss.w - 12, 12);
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 7px "Press Start 2P", monospace';
+            ctx.fillText('FINAL DEMAND', 10, -enemyBoss.h + 17);
+
+            // Fiery Radiator Grille Teeth (The "Heating" Monster)
+            ctx.fillStyle = '#1c1917';
+            ctx.fillRect(10, -55, enemyBoss.w - 20, 30);
+            ctx.fillStyle = '#f87171';
+            for (let tx = 14; tx < enemyBoss.w - 20; tx += 10) {
+                ctx.fillRect(tx, -50, 5, 20);
+            }
+
+            // Demanding Eyes
+            ctx.fillStyle = '#facc15';
+            ctx.fillRect(16, -80, 14, 10);
+            ctx.fillRect(enemyBoss.w - 30, -80, 14, 10);
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(20, -78, 6, 6);
+            ctx.fillRect(enemyBoss.w - 26, -78, 6, 6);
+
+            // Aura if invulnerable
+            if (!gameState.grantKnowledgeRevealed) {
+                ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(-4, -enemyBoss.h - 4, enemyBoss.w + 8, enemyBoss.h + 8);
+            }
+
+            ctx.restore();
+        }
+
+        function drawGrantKiosk() {
+            ctx.save();
+            ctx.translate(grantKiosk.x, grantKiosk.y);
+
+            // Booth Body
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, grantKiosk.w, grantKiosk.h);
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(0, 0, grantKiosk.w, grantKiosk.h);
+
+            // Glowing Screen
+            ctx.fillStyle = '#0369a1';
+            ctx.fillRect(10, 12, grantKiosk.w - 20, 42);
+
+            // Screen text
+            ctx.fillStyle = '#e0f2fe';
+            ctx.font = '6px "Press Start 2P", monospace';
+            ctx.fillText('CARER HUB', 14, 26);
+            ctx.fillText('GRANTS & AID', 14, 38);
+
+            // Keypad & Slots
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(10, 60, grantKiosk.w - 20, 22);
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(grantKiosk.w/2 - 10, 72, 20, 3); // Cash/Grant dispenser
+
+            // Interaction Prompt when Seren is close
+            const dist = Math.abs((player.x + player.w/2) - (grantKiosk.x + grantKiosk.w/2));
+            if (dist < 70 && !gameState.grantKnowledgeRevealed) {
+                const bounce = Math.sin(performance.now() * 0.008) * 4;
+                ctx.fillStyle = '#facc15';
+                ctx.font = '8px "Press Start 2P", monospace';
+                ctx.fillText('[E] GET ADVICE', -10, -14 + bounce);
+            }
+
+            ctx.restore();
+        }
+
+        function drawTokens() {
+            grantTokens.forEach(t => {
+                if (t.collected) return;
+                const bob = Math.sin(performance.now() * 0.006 + t.x) * 5;
+                ctx.fillStyle = '#facc15';
+                ctx.beginPath();
+                ctx.arc(t.x, t.y + bob, 9, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#b45309';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.fillStyle = '#78350f';
+                ctx.font = 'bold 8px monospace';
+                ctx.fillText('£', t.x - 3, t.y + bob + 3);
+            });
+        }
+
+        // -------------------------------------------------------------
+        // 9. VICTORY / DEFEAT LOGIC
+        // -------------------------------------------------------------
+        function checkVictoryCondition() {
+            if (enemyBoss.health <= 0 && !gameState.hasWon) {
+                gameState.hasWon = true;
+                const modal = document.getElementById('endModal');
+                const banner = document.getElementById('endBanner');
+                const subtitle = document.getElementById('endSubtitle');
+                const stats = document.getElementById('endStats');
+
+                banner.innerText = "STAGE CLEAR: CRISIS DEFUSED!";
+                banner.className = "arcade-font text-2xl sm:text-3xl text-emerald-400 mb-2 arcade-glow";
+                subtitle.innerText = "By taking action and discovering available carer grants, Seren defeated the heating debt without having to sacrifice her education or health.";
+
+                stats.innerHTML = `
+                    <div class="flex justify-between"><span>Seren Final Stamina:</span> <strong class="text-emerald-400">${gameState.serenEnergy}%</strong></div>
+                    <div class="flex justify-between"><span>Dad's Wellbeing:</span> <strong class="text-sky-400">${gameState.dadEnergy}%</strong></div>
+                    <div class="flex justify-between"><span>Secured Grant Support:</span> <strong class="text-amber-400">£${gameState.finances}</strong></div>
+                    <div class="flex justify-between"><span>Grant Awareness Status:</span> <strong class="text-white">${gameState.grantKnowledgeRevealed ? 'UNLOCKED' : 'MISSED'}</strong></div>
+                `;
+
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function triggerGameOver(reason) {
+            gameState.isGameOver = true;
+            sfx.hurt();
+            const modal = document.getElementById('endModal');
+            const banner = document.getElementById('endBanner');
+            const subtitle = document.getElementById('endSubtitle');
+            const stats = document.getElementById('endStats');
+
+            banner.innerText = "STAGE FAILED";
+            banner.className = "arcade-font text-2xl sm:text-3xl text-red-500 mb-2 arcade-glow";
+            subtitle.innerText = reason;
+
+            stats.innerHTML = `
+                <div class="flex justify-between"><span>Seren Energy:</span> <strong class="text-red-400">${gameState.serenEnergy}%</strong></div>
+                <div class="flex justify-between"><span>Dad Wellbeing:</span> <strong class="text-slate-400">${gameState.dadEnergy}%</strong></div>
+                <div class="text-[11px] text-amber-300 mt-2">Takeaway for Co-Design: Unassisted financial stress directly impacts school readiness and personal health.</div>
+            `;
+
+            modal.classList.remove('hidden');
+        }
+
+        window.resetGame = function() {
+            document.getElementById('endModal').classList.add('hidden');
+            document.getElementById('decisionModal').classList.add('hidden');
+            gameState = {
+                serenEnergy: 85,
+                dadEnergy: 60,
+                finances: 45,
+                stageTimer: 90,
+                activeChallengeSolved: false,
+                grantKnowledgeRevealed: false,
+                currentDecision: null,
+                isGameOver: false,
+                hasWon: false
+            };
+            player.x = 120;
+            player.y = GROUND_Y;
+            player.vx = 0;
+            player.vy = 0;
+            enemyBoss.health = 100;
+            enemyBoss.isDefeated = false;
+            enemyBoss.shakeTimer = 0;
+            grantTokens.forEach(t => t.collected = false);
+            particles = [];
+        };
+
+        // -------------------------------------------------------------
+        // 10. MAIN ENGINE LOOP
+        // -------------------------------------------------------------
+        function gameLoop(timestamp) {
+            const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+            lastTime = timestamp;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        requestAnimationFrame((ts) => {
+            lastTime = ts;
+            gameLoop(ts);
+        });
+    </script>
+</body>
+</html>
